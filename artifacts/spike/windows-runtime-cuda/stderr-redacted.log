@@ -1,0 +1,12 @@
+Real TotalSegmentator stderr was captured outside source control.
+The tracked evidence intentionally omits raw third-party output, progress-line
+payloads, absolute paths, and stdout/stderr tails.
+
+Sanitized outcome:
+- process return code: 0
+- task: craniofacial_structures
+- requested device: cuda:0
+- upstream device argument: gpu:0
+- final status: success
+- coordinator elapsed seconds: 44.805
+- model weights obtained from TotalSegmentator's configured official source

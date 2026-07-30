@@ -1,0 +1,1228 @@
+<Window
+    x:Class="TotalSegmentatorWrapper.Windows.CoordinatorShell.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore"
+    Title="TotalSegmentator Wrapper for Windows"
+    Width="1180"
+    Height="760"
+    MinWidth="900"
+    MinHeight="640"
+    WindowStartupLocation="CenterScreen"
+    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+    Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
+    UseLayoutRounding="True"
+    TextOptions.TextFormattingMode="Display"
+    automation:AutomationProperties.Name="TotalSegmentator Wrapper for Windows">
+  <Window.Resources>
+    <Style
+        x:Key="PrimaryButtonStyle"
+        TargetType="Button"
+        BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="MinHeight" Value="54" />
+      <Setter Property="Padding" Value="18,10" />
+    </Style>
+    <Style
+        x:Key="CardButtonStyle"
+        TargetType="Button"
+        BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="20" />
+      <Setter Property="MinHeight" Value="230" />
+    </Style>
+    <Style x:Key="StepCircleStyle" TargetType="Border">
+      <Setter Property="Width" Value="34" />
+      <Setter Property="Height" Value="34" />
+      <Setter Property="CornerRadius" Value="17" />
+      <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+      <Setter Property="Margin" Value="0,0,12,0" />
+    </Style>
+    <Style
+        x:Key="SectionTitleStyle"
+        TargetType="TextBlock"
+        BasedOn="{StaticResource {x:Type TextBlock}}">
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <Style
+        x:Key="MutedTextStyle"
+        TargetType="TextBlock"
+        BasedOn="{StaticResource {x:Type TextBlock}}">
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="280" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <Border
+        Grid.Column="0"
+        Padding="24"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+        BorderThickness="0,0,1,0">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock
+            Grid.Row="0"
+            Text="TotalSegmentator Wrapper&#x0a;for Windows"
+            FontSize="22"
+            FontWeight="SemiBold"
+            Margin="0,0,0,12" />
+        <TextBlock
+            Grid.Row="1"
+            Text="研究・教育・検証用の3Dプレビューを作成します。"
+            Style="{StaticResource MutedTextStyle}"
+            Margin="0,0,0,24" />
+        <StackPanel Grid.Row="2">
+          <Separator Margin="0,0,0,18" />
+          <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="Step1Circle" Style="{StaticResource StepCircleStyle}">
+              <TextBlock Text="1" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="目的" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="Sampleか手元のCTデータを選びます。" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            </StackPanel>
+          </Grid>
+          <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="Step2Circle" Style="{StaticResource StepCircleStyle}">
+              <TextBlock Text="2" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="入力" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="CT入力と作成内容を確認します。" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            </StackPanel>
+          </Grid>
+          <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="Step3Circle" Style="{StaticResource StepCircleStyle}">
+              <TextBlock Text="3" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="実行" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="このWindows PCで3Dプレビューを作成します。" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            </StackPanel>
+          </Grid>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="Step4Circle" Style="{StaticResource StepCircleStyle}">
+              <TextBlock Text="4" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="結果" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="3Dプレビューと保存結果を確認します。" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+        <TextBlock
+            Grid.Row="3"
+            Text="研究・教育目的の非臨床プレビューです。医療機器ではなく、診断、治療方針の決定、治療計画、またはその他の医療上の判断には使用できません。"
+            Style="{StaticResource MutedTextStyle}"
+            FontSize="11"
+            automation:AutomationProperties.Name="非臨床利用の注意" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="34,28">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+      <Grid Grid.Row="0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock x:Name="HeaderTitle" FontSize="34" FontWeight="SemiBold" />
+          <TextBlock
+              x:Name="HeaderSubtitle"
+              Style="{StaticResource MutedTextStyle}"
+              FontSize="15"
+              Margin="0,5,0,0" />
+        </StackPanel>
+        <Border
+            Grid.Column="1"
+            Padding="14,8"
+            CornerRadius="18"
+            Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+            VerticalAlignment="Center">
+          <TextBlock x:Name="StatusPillText" FontWeight="SemiBold" />
+        </Border>
+      </Grid>
+      <Separator Grid.Row="1" Margin="0,18,0,22" />
+
+      <Grid Grid.Row="2">
+        <ScrollViewer x:Name="SetupPanel" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock
+                Text="3Dプレビューを作成するための実行環境を、このWindows PCで確認します。新しい依存関係の取得や再解決は行いません。"
+                Style="{StaticResource MutedTextStyle}"
+                FontSize="16"
+                Margin="0,0,0,18" />
+            <Expander Header="データの扱い" Margin="0,0,0,22">
+              <TextBlock
+                  Text="入力データ、作成結果、ログはこのWindows PC内に保存します。外部へ送信しません。"
+                  Style="{StaticResource MutedTextStyle}"
+                  Margin="18,10,0,0" />
+            </Expander>
+            <TextBlock Text="準備を始める" Style="{StaticResource SectionTitleStyle}" />
+            <TextBlock
+                x:Name="RuntimeMessage"
+                Text="同梱済みのapp-private runtime、Sample、モデルキャッシュを確認します。"
+                Style="{StaticResource MutedTextStyle}"
+                Margin="0,0,0,18" />
+            <TextBlock
+                x:Name="RuntimeErrorCode"
+                Visibility="Collapsed"
+                FontFamily="Cascadia Mono, Consolas"
+                Margin="0,0,0,8" />
+            <TextBlock
+                x:Name="RuntimeRecoveryMessage"
+                Visibility="Collapsed"
+                Style="{StaticResource MutedTextStyle}"
+                Margin="0,0,0,18" />
+            <Button
+                x:Name="PrepareButton"
+                Content="準備を始める"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="PrepareButton_Click"
+                IsDefault="True"
+                TabIndex="1"
+                automation:AutomationProperties.Name="準備を始める"
+                automation:AutomationProperties.HelpText="同梱済みのWindows実行環境を確認します。" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="StartPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="18" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+              <Button
+                  x:Name="SampleChoiceButton"
+                  Style="{StaticResource CardButtonStyle}"
+                  Click="SampleChoiceButton_Click"
+                  TabIndex="1"
+                  automation:AutomationProperties.Name="Sampleから始める"
+                  automation:AutomationProperties.HelpText="Sample 1を使って入力から結果確認まで試します。">
+                <StackPanel Margin="0,0,0,48">
+                  <TextBlock Text="✦" FontSize="26" Margin="0,0,0,14" />
+                  <TextBlock Text="Sampleから始める" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10" />
+                  <TextBlock Text="入力から結果確認までの流れを先に試します。" Style="{StaticResource MutedTextStyle}" />
+                  <TextBlock Text="★ おすすめ" Margin="0,18,0,0" Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" FontWeight="SemiBold" />
+                </StackPanel>
+              </Button>
+              <Button
+                  x:Name="SamplePreviewButton"
+                  Content="Sample 1の3Dプレビューを開く"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Bottom"
+                  Margin="20,0,20,20"
+                  Padding="12,6"
+                  Click="SamplePreviewButton_Click"
+                  TabIndex="2"
+                  automation:AutomationProperties.Name="Sample 1の3Dプレビューを開く"
+                  automation:AutomationProperties.HelpText="作成処理を行わず、同梱済みのローカル3Dプレビューを開きます。" />
+            </Grid>
+            <Button
+                x:Name="OwnDataChoiceButton"
+                Grid.Column="2"
+                Style="{StaticResource CardButtonStyle}"
+                Click="OwnDataChoiceButton_Click"
+                TabIndex="3"
+                automation:AutomationProperties.Name="手元のCTデータを使う"
+                automation:AutomationProperties.HelpText="NIfTI形式のCTファイルまたはDICOM撮影フォルダを選びます。">
+              <StackPanel>
+                <Path
+                    Width="30"
+                    Height="24"
+                    Margin="0,0,0,14"
+                    HorizontalAlignment="Left"
+                    Stretch="Fill"
+                    Fill="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                    Data="M1,5 L11,5 L14,9 L29,9 L29,23 L1,23 Z M1,3 L12,3 L15,7 L29,7 L29,9 L14,9 L11,5 L1,5 Z"
+                    automation:AutomationProperties.Name="CTデータのフォルダ" />
+                <TextBlock Text="手元のCTデータを使う" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <TextBlock Text="NIfTI形式のCTファイルまたはDICOM撮影フォルダを選びます。" Style="{StaticResource MutedTextStyle}" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="InputPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Text="入力" Style="{StaticResource SectionTitleStyle}" />
+            <Grid Margin="0,0,0,20">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="InputDisplayName" Text="Sample 1" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Button
+                  x:Name="ChooseInputButton"
+                  Grid.Column="1"
+                  Content="手元のCTを選ぶ"
+                  Click="ChooseInputButton_Click"
+                  TabIndex="1"
+                  automation:AutomationProperties.Name="手元のCTを選ぶ" />
+            </Grid>
+            <Border
+                x:Name="InputSourceChoicePanel"
+                Visibility="Collapsed"
+                Padding="16"
+                Margin="0,0,0,20"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+              <StackPanel>
+                <TextBlock Text="CTデータを選ぶ" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <TextBlock
+                    Text="NIfTIファイル、またはDICOMファイルを直接含む撮影フォルダを選んでください。"
+                    Style="{StaticResource MutedTextStyle}"
+                    Margin="0,0,0,12" />
+                <WrapPanel>
+                  <Button
+                      x:Name="ChooseNiftiButton"
+                      Content="NIfTIファイルを選ぶ"
+                      Click="ChooseNiftiButton_Click"
+                      Margin="0,0,8,8"
+                      TabIndex="2"
+                      automation:AutomationProperties.Name="NIfTIファイルを選ぶ" />
+                  <Button
+                      x:Name="ChooseDicomFolderButton"
+                      Content="DICOMフォルダを選ぶ"
+                      Click="ChooseDicomFolderButton_Click"
+                      Margin="0,0,8,8"
+                      TabIndex="3"
+                      automation:AutomationProperties.Name="DICOMフォルダを選ぶ" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+            <Border
+                x:Name="DicomSeriesSummaryPanel"
+                Visibility="Collapsed"
+                Padding="14"
+                Margin="0,0,0,16"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                BorderThickness="1"
+                CornerRadius="8">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Name="DicomSeriesSummaryText"
+                    Text="使用する撮影:"
+                    VerticalAlignment="Center"
+                    TextWrapping="Wrap" />
+                <Button
+                    x:Name="ChangeDicomSeriesButton"
+                    Grid.Column="1"
+                    Content="変更"
+                    Click="ChangeDicomSeriesButton_Click"
+                    Margin="12,0,0,0"
+                    TabIndex="4"
+                    automation:AutomationProperties.Name="使用する撮影を変更" />
+              </Grid>
+            </Border>
+            <Border
+                x:Name="DicomSeriesSelectionPanel"
+                Visibility="Collapsed"
+                Padding="18"
+                Margin="0,0,0,20"
+                BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                BorderThickness="2"
+                CornerRadius="8"
+                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+              <StackPanel>
+                <TextBlock Text="使用する撮影を変更" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <TextBlock
+                    Text="最初の候補を選択しています。別の撮影を使う場合だけ変更してください。"
+                    Style="{StaticResource MutedTextStyle}"
+                    Margin="0,0,0,12" />
+                <ListBox
+                    x:Name="DicomSeriesListBox"
+                    MinHeight="90"
+                    MaxHeight="210"
+                    Margin="0,0,0,14"
+                    SelectionMode="Single"
+                    automation:AutomationProperties.Name="取り込める通常CTの撮影候補">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Margin="4">
+                        <TextBlock Text="{Binding DisplayTitle}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding DisplayDetail}" Style="{StaticResource MutedTextStyle}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Button
+                    x:Name="UseSelectedDicomSeriesButton"
+                    Content="この撮影を使う"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Click="UseSelectedDicomSeriesButton_Click"
+                    Margin="0,0,0,10"
+                    TabIndex="5"
+                    automation:AutomationProperties.Name="この撮影を使う" />
+                <Button
+                    x:Name="CloseDicomSeriesButton"
+                    Content="閉じる"
+                    HorizontalAlignment="Left"
+                    Click="CloseDicomSeriesButton_Click"
+                    TabIndex="6"
+                    automation:AutomationProperties.Name="撮影選択を閉じる" />
+              </StackPanel>
+            </Border>
+            <TextBlock Text="作成する3Dプレビュー" Style="{StaticResource SectionTitleStyle}" />
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Button
+                  x:Name="StandardModelCardButton"
+                  Grid.Column="0"
+                  Style="{StaticResource CardButtonStyle}"
+                  MinHeight="150"
+                  Click="StandardModelCardButton_Click"
+                  TabIndex="7"
+                  automation:AutomationProperties.Name="標準モデルを選ぶ">
+                <StackPanel>
+                  <TextBlock x:Name="StandardModelCardTitle" Text="✓  標準モデル" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Text="TotalSegmentator" FontSize="17" FontWeight="SemiBold" Margin="0,10,0,6" />
+                  <TextBlock Text="顎骨と歯列をまとめて作成します。最初におすすめの方法です。" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                  <TextBlock Text="おすすめ" Margin="0,12,0,0" Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" FontWeight="SemiBold" />
+                </StackPanel>
+              </Button>
+              <Button
+                  x:Name="OtherModelsCardButton"
+                  Grid.Column="2"
+                  Style="{StaticResource CardButtonStyle}"
+                  MinHeight="150"
+                  Click="OtherModelsCardButton_Click"
+                  TabIndex="8"
+                  automation:AutomationProperties.Name="その他のモデルを比較">
+                <StackPanel>
+                  <TextBlock x:Name="OtherModelsCardTitle" Text="その他のモデル" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock x:Name="OtherModelsCardName" Text="比較して選ぶ" FontSize="17" FontWeight="SemiBold" Margin="0,10,0,6" />
+                  <TextBlock x:Name="OtherModelsCardDetail" Text="結果画像と処理内容を見ながら、用途に合う方法を選べます。" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Button>
+            </Grid>
+            <TextBlock
+                x:Name="ModelSelectionMessage"
+                Visibility="Collapsed"
+                TextWrapping="Wrap"
+                Margin="0,0,0,12"
+                Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                automation:AutomationProperties.Name="追加モデルの状態" />
+            <Border
+                x:Name="ModelComparisonPanel"
+                Visibility="Collapsed"
+                Padding="18"
+                Margin="0,0,0,18"
+                BorderBrush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                BorderThickness="2"
+                CornerRadius="8"
+                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+              <StackPanel>
+                <Grid Margin="0,0,0,12">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <TextBlock Text="作成方法を比較" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="通常はTotalSegmentatorがおすすめです。" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                  </StackPanel>
+                  <Button
+                      x:Name="CloseModelComparisonButton"
+                      Grid.Column="1"
+                      Content="閉じる"
+                      Click="CloseModelComparisonButton_Click"
+                      TabIndex="9"
+                      automation:AutomationProperties.Name="作成方法の比較を閉じる" />
+                </Grid>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="12" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <Border Grid.Column="0" Padding="12" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" BorderThickness="1" CornerRadius="7">
+                    <StackPanel>
+                      <TextBlock Text="通常（TotalSegmentator）" FontSize="17" FontWeight="SemiBold" />
+                      <Image Source="/model_comparison/totalseg.png" Height="130" Stretch="UniformToFill" Margin="0,9,0,9" automation:AutomationProperties.Name="通常のTotalSegmentatorによる3D分割結果" />
+                      <TextBlock Text="顎骨と歯列をまとめて作成します。比較的速く、最初に試す方法です。" TextWrapping="Wrap" />
+                      <TextBlock
+                          x:Name="StandardReadinessText"
+                          Text="準備済み"
+                          Foreground="#187A38"
+                          FontWeight="SemiBold"
+                          Margin="0,5,0,0"
+                          automation:AutomationProperties.Name="通常TotalSegmentatorの準備状況" />
+                      <Button
+                          x:Name="SelectStandardModelButton"
+                          Content="この方法を選ぶ"
+                          Click="SelectStandardModelButton_Click"
+                          Margin="0,10,0,0"
+                          TabIndex="10"
+                          automation:AutomationProperties.Name="通常のTotalSegmentatorを選ぶ" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Column="2" Padding="12" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" BorderThickness="1" CornerRadius="7">
+                    <StackPanel>
+                      <TextBlock Text="DentalSegmentator" FontSize="17" FontWeight="SemiBold" />
+                      <Image Source="/model_comparison/dentalseg.png" Height="130" Stretch="UniformToFill" Margin="0,9,0,9" automation:AutomationProperties.Name="DentalSegmentatorによる3D分割結果" />
+                      <TextBlock Text="上下の歯列・顎骨・下顎管を5領域に分ける追加モデルです。" TextWrapping="Wrap" />
+                      <TextBlock Text="実験的。検証済みの追加モデルが必要です。" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                      <TextBlock
+                          x:Name="DentalReadinessText"
+                          FontWeight="SemiBold"
+                          Margin="0,5,0,0"
+                          TextWrapping="Wrap"
+                          automation:AutomationProperties.Name="DentalSegmentatorの準備状況" />
+                      <Button
+                          x:Name="SelectDentalSegmentatorButton"
+                          Content="この方法を選ぶ"
+                          Click="SelectDentalSegmentatorButton_Click"
+                          Margin="0,10,0,0"
+                          TabIndex="11"
+                          automation:AutomationProperties.Name="DentalSegmentatorを選ぶ" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Row="2" Grid.Column="0" Padding="12" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" BorderThickness="1" CornerRadius="7">
+                    <StackPanel>
+                      <TextBlock Text="個別歯ベータ" FontSize="17" FontWeight="SemiBold" />
+                      <Image Source="/model_comparison/individual.png" Height="130" Stretch="UniformToFill" Margin="0,9,0,9" automation:AutomationProperties.Name="個別歯ベータによる3D分割結果" />
+                      <TextBlock Text="TotalSegmentatorの旧個別歯経路で、歯を1本ずつ表示します。" TextWrapping="Wrap" />
+                      <TextBlock Text="ベータ機能です。通常の表示より時間がかかります。" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                      <TextBlock
+                          x:Name="IndividualReadinessText"
+                          FontWeight="SemiBold"
+                          Margin="0,5,0,0"
+                          TextWrapping="Wrap"
+                          automation:AutomationProperties.Name="個別歯ベータの準備状況" />
+                      <Button
+                          x:Name="SelectIndividualTeethButton"
+                          Content="この方法を選ぶ"
+                          Click="SelectIndividualTeethButton_Click"
+                          Margin="0,10,0,0"
+                          TabIndex="12"
+                          automation:AutomationProperties.Name="個別歯ベータを選ぶ" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Row="2" Grid.Column="2" Padding="12" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" BorderThickness="1" CornerRadius="7">
+                    <StackPanel>
+                      <TextBlock Text="高精細歯（ToothSeg）" FontSize="17" FontWeight="SemiBold" />
+                      <Image Source="/model_comparison/toothseg.png" Height="130" Stretch="UniformToFill" Margin="0,9,0,9" automation:AutomationProperties.Name="高精細歯ToothSegによる3D分割結果" />
+                      <TextBlock Text="歯を1本ずつ分け、FDI歯式番号を付ける高精細推論です。" TextWrapping="Wrap" />
+                      <TextBlock Text="実験的な追加機能です。通常より長い処理時間とVRAMを必要とします。" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                      <TextBlock
+                          x:Name="ToothSegReadinessText"
+                          FontWeight="SemiBold"
+                          Margin="0,5,0,0"
+                          TextWrapping="Wrap"
+                          automation:AutomationProperties.Name="ToothSegの準備状況" />
+                      <Button
+                          x:Name="SelectToothSegButton"
+                          Content="この方法を選ぶ"
+                          Click="SelectToothSegButton_Click"
+                          Margin="0,10,0,0"
+                          TabIndex="13"
+                          automation:AutomationProperties.Name="高精細歯ToothSegを選ぶ" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <TextBlock Text="Windowsでの処理時間はGPU、VRAM、CT範囲により変わるため、実測前の時間表示は行いません。" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <TextBlock Text="GPU  NVIDIA CUDA (cuda:0)を必須として使用" Margin="0,0,0,8" FontWeight="SemiBold" />
+            <TextBlock Text="CPUへ自動的に切り替えません。" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,14" />
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock
+                  x:Name="OutputDisplayName"
+                  Text="保存先: runs"
+                  Style="{StaticResource MutedTextStyle}"
+                  VerticalAlignment="Center" />
+              <Button
+                  x:Name="ChangeOutputRootButton"
+                  Grid.Column="1"
+                  Content="変更"
+                  Click="ChangeOutputRootButton_Click"
+                  automation:AutomationProperties.Name="結果の保存先を変更" />
+            </Grid>
+            <CheckBox
+                x:Name="HigherOrderResamplingCheckBox"
+                Content="表面をなめらかに仕上げる"
+                Margin="0,0,0,10"
+                Click="HigherOrderResamplingCheckBox_Click"
+                automation:AutomationProperties.Name="表面をなめらかに仕上げる"
+                automation:AutomationProperties.HelpText="標準TotalSegmentatorでhigher-order resamplingを使用します。" />
+            <Expander
+                x:Name="InputDetailsExpander"
+                Header="入力と保存の詳細"
+                Margin="0,0,0,14"
+                Expanded="InputDetailsExpander_Expanded"
+                automation:AutomationProperties.Name="入力と保存の詳細">
+              <Border
+                  Padding="10"
+                  BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                  BorderThickness="1"
+                  CornerRadius="6">
+                <TextBlock
+                    x:Name="InputDetailsText"
+                    TextWrapping="Wrap"
+                    Style="{StaticResource MutedTextStyle}" />
+              </Border>
+            </Expander>
+            <TextBlock
+                x:Name="SampleNotice"
+                Text="同梱Sample 1はUI確認・動作確認用です。診断、治療方針の決定、治療計画、定量的な精度評価、または臨床利用には使用できません。"
+                Style="{StaticResource MutedTextStyle}"
+                Margin="0,0,0,20"
+                automation:AutomationProperties.Name="Sample利用の注意" />
+            <Button
+                x:Name="RunButton"
+                Content="Sampleで3Dプレビューを作る"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="RunButton_Click"
+                IsDefault="True"
+                TabIndex="2"
+                automation:AutomationProperties.Name="Sampleで3Dプレビューを作る"
+                automation:AutomationProperties.HelpText="strict CUDAでTotalSegmentator処理を開始します。" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="DicomPreviewPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock
+                  x:Name="DicomPreviewSeriesText"
+                  Text="表示中の撮影を確認しています。"
+                  Style="{StaticResource MutedTextStyle}"
+                  VerticalAlignment="Center" />
+              <Button
+                  x:Name="ViewOtherDicomSeriesButton"
+                  Grid.Column="1"
+                  Content="同じフォルダのほかの撮影を見る"
+                  Click="ViewOtherDicomSeriesButton_Click"
+                  Visibility="Collapsed"
+                  automation:AutomationProperties.Name="同じフォルダのほかの撮影を見る" />
+            </Grid>
+            <TextBlock
+                x:Name="DicomPreviewInstructionText"
+                Text="歯や顎など、確認したい範囲が3枚に写っていることを確認してください。"
+                Margin="0,0,0,14"
+                FontWeight="SemiBold"
+                TextWrapping="Wrap" />
+            <Grid Margin="0,0,0,14">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="0" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <StackPanel>
+                  <TextBlock Text="上から" FontWeight="SemiBold" Margin="0,0,0,8" />
+                  <Border Height="245" Background="Black" CornerRadius="6">
+                    <Image x:Name="DicomPreviewAxialImage" Stretch="Uniform" />
+                  </Border>
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="2" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <StackPanel>
+                  <TextBlock Text="正面から" FontWeight="SemiBold" Margin="0,0,0,8" />
+                  <Border Height="245" Background="Black" CornerRadius="6">
+                    <Image x:Name="DicomPreviewCoronalImage" Stretch="Uniform" />
+                  </Border>
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="4" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <StackPanel>
+                  <TextBlock Text="横から" FontWeight="SemiBold" Margin="0,0,0,8" />
+                  <Border Height="245" Background="Black" CornerRadius="6">
+                    <Image x:Name="DicomPreviewSagittalImage" Stretch="Uniform" />
+                  </Border>
+                </StackPanel>
+              </Border>
+            </Grid>
+            <Button
+                x:Name="UseDisplayedDicomPreviewButton"
+                Content="表示中の撮影で3Dプレビュー作成へ進む"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="UseDisplayedDicomPreviewButton_Click"
+                Margin="0,0,0,14"
+                automation:AutomationProperties.Name="表示中の撮影で3Dプレビュー作成へ進む"
+                automation:AutomationProperties.HelpText="検証済みの変換NIfTIを入力として確定します。AI推論はまだ開始しません。" />
+            <Button
+                x:Name="ChooseAnotherDicomFolderFromPreviewButton"
+                Content="別のDICOMフォルダを選ぶ"
+                HorizontalAlignment="Left"
+                Click="ChooseAnotherDicomFolderFromPreviewButton_Click"
+                automation:AutomationProperties.Name="CT画像確認から別のDICOMフォルダを選ぶ" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="DicomRescuePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border
+                Padding="14"
+                Margin="0,0,0,18"
+                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                CornerRadius="8">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock
+                      Text="三方向の形が自然に見えるよう、画像の端を動かしてください。"
+                      FontWeight="SemiBold"
+                      TextWrapping="Wrap" />
+                  <TextBlock
+                      Text="同じ色のハンドルは連動します。"
+                      Style="{StaticResource MutedTextStyle}"
+                      Margin="0,5,0,0" />
+                </StackPanel>
+                <Button
+                    x:Name="ShowRescueReasonButton"
+                    Grid.Column="1"
+                    Content="理由を見る"
+                    Click="ShowRescueReasonButton_Click"
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Center"
+                    automation:AutomationProperties.Name="形状候補の理由を見る" />
+              </Grid>
+            </Border>
+            <Border
+                x:Name="RescueReasonPanel"
+                Visibility="Collapsed"
+                Padding="12"
+                Margin="0,0,0,16"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                BorderThickness="1"
+                CornerRadius="6">
+              <TextBlock
+                  x:Name="RescueReasonText"
+                  Text="X/Yは編集用の仮初期値です。Zは利用できる場合だけDICOMのスライス厚を候補に使います。推定の確かさ: 低。"
+                  TextWrapping="Wrap"
+                  Style="{StaticResource MutedTextStyle}" />
+            </Border>
+            <TextBlock Text="使用する撮影" Style="{StaticResource SectionTitleStyle}" />
+            <ComboBox
+                x:Name="RescueCandidateComboBox"
+                DisplayMemberPath="DisplayTitle"
+                SelectionChanged="RescueCandidateComboBox_SelectionChanged"
+                Margin="0,0,0,16"
+                automation:AutomationProperties.Name="形状を確認する撮影" />
+            <Grid Margin="0,0,0,18">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Border Grid.Column="0" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Text="AXIAL" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                  <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Height="170" Background="Black" ClipToBounds="True">
+                      <Image x:Name="RescueAxialImage" Stretch="Uniform" />
+                      <Border Width="1" Background="White" Opacity="0.28" HorizontalAlignment="Center" />
+                      <Border Height="1" Background="White" Opacity="0.28" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                      <TextBlock Text="↑" Foreground="#18A957" FontWeight="Bold" HorizontalAlignment="Center" />
+                      <Slider
+                          x:Name="RescueSpacingYSlider"
+                          Orientation="Vertical"
+                          Height="132"
+                          Minimum="-2"
+                          Maximum="2"
+                          Value="0"
+                          SmallChange="0.05"
+                          LargeChange="0.25"
+                          ValueChanged="RescueSpacingSlider_ValueChanged"
+                          automation:AutomationProperties.Name="AXIAL画像のY方向を縦に伸縮"
+                          automation:AutomationProperties.HelpText="緑色。同じ色のSAGITTAL横ハンドルと連動します。" />
+                      <TextBlock Text="↓" Foreground="#18A957" FontWeight="Bold" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid Grid.Row="2" Grid.Column="0" Margin="0,8,34,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="←" Foreground="#1684E8" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Slider
+                        x:Name="RescueSpacingXSlider"
+                        Grid.Column="1"
+                        Minimum="-2"
+                        Maximum="2"
+                        Value="0"
+                        SmallChange="0.05"
+                        LargeChange="0.25"
+                        ValueChanged="RescueSpacingSlider_ValueChanged"
+                        automation:AutomationProperties.Name="AXIAL画像のX方向を横に伸縮"
+                        automation:AutomationProperties.HelpText="青色。同じ色のCORONAL横ハンドルと連動します。" />
+                    <TextBlock Grid.Column="2" Text="→" Foreground="#1684E8" FontWeight="Bold" VerticalAlignment="Center" />
+                  </Grid>
+                </Grid>
+              </Border>
+              <Border Grid.Column="2" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Text="CORONAL" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                  <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Height="170" Background="Black" ClipToBounds="True">
+                      <Image x:Name="RescueCoronalImage" Stretch="Uniform" />
+                      <Border Width="1" Background="White" Opacity="0.28" HorizontalAlignment="Center" />
+                      <Border Height="1" Background="White" Opacity="0.28" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                      <TextBlock Text="↑" Foreground="#FF7A1A" FontWeight="Bold" HorizontalAlignment="Center" />
+                      <Slider
+                          x:Name="RescueSpacingZSlider"
+                          Orientation="Vertical"
+                          Height="132"
+                          Minimum="-2"
+                          Maximum="2"
+                          Value="0"
+                          SmallChange="0.05"
+                          LargeChange="0.25"
+                          ValueChanged="RescueSpacingSlider_ValueChanged"
+                          automation:AutomationProperties.Name="CORONAL画像のZ方向を縦に伸縮"
+                          automation:AutomationProperties.HelpText="橙色。同じ色のSAGITTAL縦ハンドルと連動します。" />
+                      <TextBlock Text="↓" Foreground="#FF7A1A" FontWeight="Bold" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid Grid.Row="2" Grid.Column="0" Margin="0,8,34,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="←" Foreground="#1684E8" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Slider
+                        x:Name="RescueSpacingXCoronalSlider"
+                        Grid.Column="1"
+                        Minimum="-2"
+                        Maximum="2"
+                        Value="0"
+                        SmallChange="0.05"
+                        LargeChange="0.25"
+                        ValueChanged="RescueSpacingSlider_ValueChanged"
+                        automation:AutomationProperties.Name="CORONAL画像のX方向を横に伸縮"
+                        automation:AutomationProperties.HelpText="青色。同じ色のAXIAL横ハンドルと連動します。" />
+                    <TextBlock Grid.Column="2" Text="→" Foreground="#1684E8" FontWeight="Bold" VerticalAlignment="Center" />
+                  </Grid>
+                </Grid>
+              </Border>
+              <Border Grid.Column="4" Padding="10" BorderBrush="#24000000" BorderThickness="1" CornerRadius="8">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Text="SAGITTAL" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                  <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Height="170" Background="Black" ClipToBounds="True">
+                      <Image x:Name="RescueSagittalImage" Stretch="Uniform" />
+                      <Border Width="1" Background="White" Opacity="0.28" HorizontalAlignment="Center" />
+                      <Border Height="1" Background="White" Opacity="0.28" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                      <TextBlock Text="↑" Foreground="#FF7A1A" FontWeight="Bold" HorizontalAlignment="Center" />
+                      <Slider
+                          x:Name="RescueSpacingZSagittalSlider"
+                          Orientation="Vertical"
+                          Height="132"
+                          Minimum="-2"
+                          Maximum="2"
+                          Value="0"
+                          SmallChange="0.05"
+                          LargeChange="0.25"
+                          ValueChanged="RescueSpacingSlider_ValueChanged"
+                          automation:AutomationProperties.Name="SAGITTAL画像のZ方向を縦に伸縮"
+                          automation:AutomationProperties.HelpText="橙色。同じ色のCORONAL縦ハンドルと連動します。" />
+                      <TextBlock Text="↓" Foreground="#FF7A1A" FontWeight="Bold" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid Grid.Row="2" Grid.Column="0" Margin="0,8,34,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="←" Foreground="#18A957" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Slider
+                        x:Name="RescueSpacingYSagittalSlider"
+                        Grid.Column="1"
+                        Minimum="-2"
+                        Maximum="2"
+                        Value="0"
+                        SmallChange="0.05"
+                        LargeChange="0.25"
+                        ValueChanged="RescueSpacingSlider_ValueChanged"
+                        automation:AutomationProperties.Name="SAGITTAL画像のY方向を横に伸縮"
+                        automation:AutomationProperties.HelpText="緑色。同じ色のAXIAL縦ハンドルと連動します。" />
+                    <TextBlock Grid.Column="2" Text="→" Foreground="#18A957" FontWeight="Bold" VerticalAlignment="Center" />
+                  </Grid>
+                </Grid>
+              </Border>
+            </Grid>
+            <TextBlock
+                x:Name="RescueValidationText"
+                Text="3枚を見比べながら形を確認してください。候補値は正確な寸法が確認できたことを意味しません。"
+                Style="{StaticResource MutedTextStyle}"
+                Margin="0,0,0,16"
+                TextWrapping="Wrap" />
+            <Button
+                x:Name="ShowRescueOrientationButton"
+                Content="画像の向きを修正"
+                HorizontalAlignment="Left"
+                Margin="0,0,0,10"
+                Click="ShowRescueOrientationButton_Click"
+                automation:AutomationProperties.Name="画像の向きを修正" />
+            <GroupBox
+                x:Name="RescueOrientationPanel"
+                Header="画像の向き"
+                Visibility="Collapsed"
+                Margin="0,0,0,14">
+              <WrapPanel Margin="10">
+                <TextBlock Text="軸の対応" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox
+                    x:Name="RescueAxisPermutationComboBox"
+                    Width="90"
+                    SelectedIndex="0"
+                    SelectionChanged="RescueAxisPermutationComboBox_SelectionChanged"
+                    automation:AutomationProperties.Name="救済画像の軸の対応">
+                  <ComboBoxItem Content="XYZ" Tag="xyz" />
+                  <ComboBoxItem Content="XZY" Tag="xzy" />
+                  <ComboBoxItem Content="YXZ" Tag="yxz" />
+                  <ComboBoxItem Content="YZX" Tag="yzx" />
+                  <ComboBoxItem Content="ZXY" Tag="zxy" />
+                  <ComboBoxItem Content="ZYX" Tag="zyx" />
+                </ComboBox>
+                <Button
+                    x:Name="RotateRescueImageButton"
+                    Content="90°回転"
+                    Margin="10,0,10,0"
+                    Click="RotateRescueImageButton_Click"
+                    automation:AutomationProperties.Name="救済画像を90度回転" />
+                <CheckBox
+                    x:Name="ReverseRescueSlicesCheckBox"
+                    Content="スライス順を反転"
+                    VerticalAlignment="Center"
+                    Click="ReverseRescueSlicesCheckBox_Click"
+                    automation:AutomationProperties.Name="救済画像のスライス順を反転" />
+              </WrapPanel>
+            </GroupBox>
+            <TextBlock
+                x:Name="RescuePreviewStatusText"
+                Text="確認画像はまだ作成されていません。AI推論は開始しません。"
+                Style="{StaticResource MutedTextStyle}"
+                Margin="0,0,0,16"
+                TextWrapping="Wrap" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Button
+                  x:Name="ChooseAnotherCtFromRescueButton"
+                  Content="別のCTを選ぶ"
+                  Click="ChooseAnotherCtFromRescueButton_Click"
+                  Margin="0,0,8,0"
+                  automation:AutomationProperties.Name="形状確認から別のCTを選ぶ" />
+              <Button
+                  x:Name="ResetRescueSpacingButton"
+                  Grid.Column="1"
+                  Content="推定形状に戻す"
+                  Click="ResetRescueSpacingButton_Click"
+                  automation:AutomationProperties.Name="推定形状に戻す" />
+              <Button
+                  x:Name="CreateRescuePreviewButton"
+                  Grid.Column="3"
+                  Content="この形状で確認画像を作る"
+                  Click="CreateRescuePreviewButton_Click"
+                  automation:AutomationProperties.Name="この形状で確認画像を作る"
+                  automation:AutomationProperties.HelpText="Secondary Captureの確認用pseudo-volumeと三方向画像を作ります。AI推論は開始しません。" />
+              <Button
+                  x:Name="ConfirmRescueAndRunButton"
+                  Grid.Column="6"
+                  Content="この形状で作成"
+                  IsEnabled="False"
+                  Style="{StaticResource PrimaryButtonStyle}"
+                  Click="ConfirmRescueAndRunButton_Click"
+                  automation:AutomationProperties.Name="確認済みの形状で3Dプレビューを作る"
+                  automation:AutomationProperties.HelpText="確認tokenに結び付いたNIfTIを検証後、strict CUDAで3Dプレビューを作ります。" />
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="RunningPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Grid Margin="0,0,0,12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="RunningTitle" Text="実行準備" FontSize="23" FontWeight="SemiBold" />
+              <TextBlock x:Name="ElapsedText" Grid.Column="1" Text="経過時間: 0秒" Style="{StaticResource MutedTextStyle}" />
+            </Grid>
+            <TextBlock x:Name="RunningDetail" Text="production coordinatorを開始しています。" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,16" />
+            <TextBlock x:Name="OverallProgressText" Text="全体の進捗範囲: 0〜25%" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <ProgressBar
+                x:Name="RunProgressBar"
+                Height="14"
+                Minimum="0"
+                Maximum="100"
+                IsIndeterminate="True"
+                automation:AutomationProperties.Name="処理の進行状況"
+                automation:AutomationProperties.HelpText="工程内の進行率または継続中状態を表示します。" />
+            <TextBlock x:Name="SubProgressText" Text="処理を継続しています。" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,20" />
+            <TextBlock x:Name="DeviceText" Text="使用機能: TotalSegmentator / strict CUDA確認中" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock x:Name="RunningOutputText" Text="保存先: 新しいcase" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,18" />
+            <Button
+                x:Name="StopButton"
+                Content="停止"
+                HorizontalAlignment="Left"
+                Click="StopButton_Click"
+                TabIndex="1"
+                automation:AutomationProperties.Name="停止"
+                automation:AutomationProperties.HelpText="graceful cancelを要求し、必要な場合はJob Objectで終了します。" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="ResultPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock x:Name="ResultTitle" Text="3Dプレビューを作成しました" FontSize="23" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <TextBlock x:Name="ResultReason" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,8" />
+            <TextBlock x:Name="ResultErrorCode" FontFamily="Cascadia Mono, Consolas" Margin="0,0,0,16" Visibility="Collapsed" />
+            <Button
+                x:Name="OpenPreviewButton"
+                Content="3Dプレビューを開く"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="OpenPreviewButton_Click"
+                Margin="0,0,0,14"
+                TabIndex="1"
+                automation:AutomationProperties.Name="3Dプレビューを開く"
+                automation:AutomationProperties.HelpText="保存済みのローカルoffline previewを既定のブラウザで開きます。" />
+            <WrapPanel Margin="0,0,0,14">
+              <Button
+                  x:Name="OpenOutputButton"
+                  Content="結果フォルダを開く"
+                  Click="OpenOutputButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="2"
+                  automation:AutomationProperties.Name="結果フォルダを開く" />
+              <Button
+                  x:Name="CopyErrorButton"
+                  Content="エラー情報をコピー"
+                  Click="CopyErrorButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="3"
+                  Visibility="Collapsed"
+                  automation:AutomationProperties.Name="エラー情報をコピー" />
+              <Button
+                  x:Name="ShowDetailsButton"
+                  Content="詳細情報を見る"
+                  Click="ShowDetailsButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="4"
+                  automation:AutomationProperties.Name="詳細情報を見る"
+                  automation:AutomationProperties.HelpText="安全なprotocol event要約だけを表示します。" />
+              <Button
+                  x:Name="ExportSlicerButton"
+                  Content="3D Slicer用に書き出す"
+                  Click="ExportSlicerButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="5"
+                  Visibility="Collapsed"
+                  automation:AutomationProperties.Name="3D Slicer用に書き出す"
+                  automation:AutomationProperties.HelpText="推論を再実行せず、検証済み結果からSlicer用ファイルを作成します。" />
+              <Button
+                  x:Name="RebuildPreviewButton"
+                  Content="3Dプレビューを再生成"
+                  Click="RebuildPreviewButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="6"
+                  Visibility="Collapsed"
+                  automation:AutomationProperties.Name="3Dプレビューを再生成"
+                  automation:AutomationProperties.HelpText="推論を再実行せず、保存済み結果からoffline previewを再生成します。" />
+            </WrapPanel>
+            <TextBlock
+                x:Name="ResultToolStatusText"
+                Visibility="Collapsed"
+                Style="{StaticResource MutedTextStyle}"
+                TextWrapping="Wrap"
+                Margin="0,0,0,10"
+                automation:AutomationProperties.Name="結果ツールの状態" />
+            <Expander
+                x:Name="ArtifactListExpander"
+                Header="保存されたファイル"
+                Visibility="Collapsed"
+                Expanded="ArtifactListExpander_Expanded"
+                Margin="0,0,0,14"
+                automation:AutomationProperties.Name="保存されたファイル一覧">
+              <Border
+                  Padding="10"
+                  BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                  BorderThickness="1"
+                  CornerRadius="6">
+                <TextBox
+                    x:Name="ArtifactListText"
+                    IsReadOnly="True"
+                    TextWrapping="NoWrap"
+                    MinHeight="80"
+                    MaxHeight="220"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Auto"
+                    automation:AutomationProperties.Name="artifact manifestの相対パスとサイズ" />
+              </Border>
+            </Expander>
+            <Border
+                x:Name="SafeDetailsPanel"
+                Visibility="Collapsed"
+                Padding="12"
+                Margin="0,0,0,14"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                BorderThickness="1"
+                CornerRadius="6">
+              <TextBox
+                  x:Name="SafeEventLogTextBox"
+                  IsReadOnly="True"
+                  TextWrapping="Wrap"
+                  AcceptsReturn="True"
+                  MinHeight="100"
+                  MaxHeight="180"
+                  VerticalScrollBarVisibility="Auto"
+                  automation:AutomationProperties.Name="安全な処理イベント要約" />
+            </Border>
+            <WrapPanel>
+              <Button
+                  x:Name="ReturnToInputButton"
+                  Content="入力と作成内容へ戻る"
+                  Click="ReturnToInputButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="5"
+                  automation:AutomationProperties.Name="入力と作成内容へ戻る" />
+              <Button
+                  x:Name="ChooseAnotherResultInputButton"
+                  Content="別のCTを選ぶ"
+                  Click="ChooseAnotherResultInputButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="6"
+                  automation:AutomationProperties.Name="結果画面から別のCTを選ぶ" />
+              <Button
+                  x:Name="RerunButton"
+                  Content="もう一度作成"
+                  Click="RerunButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="7"
+                  Visibility="Collapsed"
+                  automation:AutomationProperties.Name="同じ入力でもう一度作成" />
+              <Button
+                  x:Name="ReturnToStartButton"
+                  Content="最初に戻る"
+                  Click="ReturnToStartButton_Click"
+                  Margin="0,0,8,8"
+                  TabIndex="8"
+                  automation:AutomationProperties.Name="最初に戻る" />
+            </WrapPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

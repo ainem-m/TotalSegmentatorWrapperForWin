@@ -1,0 +1,41 @@
+{
+  "schema": "totalsegmentator_wrapper.windows_runtime.v1",
+  "status": "pass",
+  "platform": "win_amd64",
+  "python": "3.12.10",
+  "pip": "25.0.1",
+  "torch": "2.11.0+cu126",
+  "torch_cuda_build": "12.6",
+  "torchvision": "0.26.0+cu126",
+  "totalsegmentator": "2.14.0",
+  "nnunetv2": "2.8.1",
+  "acvl_utils": "0.2.6",
+  "wrapper": "0.3.0",
+  "wheel_count": 91,
+  "install": {
+    "network_used": false,
+    "index_used": false,
+    "binary_only": true,
+    "hash_locked": true,
+    "pip_check": "pass"
+  },
+  "production_import_matrix": {
+    "torch": "pass",
+    "torchvision": "pass",
+    "totalsegmentator": "pass",
+    "nnunetv2": "pass",
+    "acvl_utils": "pass",
+    "nibabel": "pass",
+    "numpy": "pass",
+    "scipy": "pass",
+    "skimage": "pass",
+    "SimpleITK": "pass",
+    "blosc2": "pass",
+    "cc3d": "pass",
+    "pydicom": "pass",
+    "gdcm": "pass",
+    "coordinator": "pass",
+    "runner": "pass",
+    "surface_preview": "pass"
+  }
+}

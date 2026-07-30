@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "totalsegmentator-wrapper-win"
+version = "0.1.0"
+description = "Non-clinical Windows coordinator and WPF shell for dental-relevant segmentation."
+requires-python = ">=3.12,<3.13"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+authors = [
+  { name = "TotalSegmentator Wrapper for Windows contributors" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+  "nibabel>=5.2",
+  "numpy>=1.26,<3",
+  "scikit-image>=0.22",
+]
+
+[project.urls]
+Repository = "https://github.com/ainem-m/TotalSegmentatorWrapperForWin"
+Issues = "https://github.com/ainem-m/TotalSegmentatorWrapperForWin/issues"
+Documentation = "https://github.com/ainem-m/TotalSegmentatorWrapperForWin/tree/main/docs"
+
+[project.optional-dependencies]
+dicom = [
+  "pydicom>=3,<4",
+]
+cuda = [
+  "torch==2.11.0",
+  "torchvision==0.26.0",
+  "totalsegmentator==2.14.0",
+]
+dentalseg = [
+  "nnunetv2==2.8.1",
+]
+toothseg = [
+  "nnunetv2==2.8.1",
+  "acvl-utils==0.2.6",
+  "scipy>=1.14,<2",
+]
+
+[project.scripts]
+totalsegmentator-wrapper-coordinator = "totalsegmentator_wrapper_mac.coordinator:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

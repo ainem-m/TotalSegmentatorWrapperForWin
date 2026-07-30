@@ -1,0 +1,51 @@
+name: DICOM compatibility report
+description: DICOM自体を送らず、typed resultから互換性を相談する
+title: "[DICOM] "
+labels:
+  - dicom
+  - compatibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        DICOMファイルやpatient dataは添付しないでください。アプリが表示したtyped errorだけを使用してください。
+  - type: input
+    id: revision
+    attributes:
+      label: Versionまたはcommit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows環境
+      description: Windows version/buildとapp version
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: データ種別
+      options:
+        - DICOM folder
+        - NIfTI file
+        - Unknown
+    validations:
+      required: true
+  - type: input
+    id: error_code
+    attributes:
+      label: Typed error code
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 非PHIの補足
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: patient data、DICOM、CT画像、絶対パスを含めていません
+          required: true

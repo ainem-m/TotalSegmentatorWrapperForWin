@@ -1,0 +1,15 @@
+{
+  "schema": "totalsegmentator_wrapper.device_doctor.v1",
+  "status": "fail",
+  "error_code": "cuda_device_index_unavailable",
+  "requested_policy": "cuda_required",
+  "requested_device_index": 1,
+  "resolved_device": null,
+  "fallback_allowed": false,
+  "fallback_occurred": false,
+  "cuda_available": true,
+  "cuda_device_count": 1,
+  "backend_started": false,
+  "output_created": false,
+  "coordinator_exit_code": 2
+}

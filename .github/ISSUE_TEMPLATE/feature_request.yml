@@ -1,0 +1,30 @@
+name: Feature request
+description: Windows shell、runtime、DICOM、配布境界の改善提案
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい問題
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望する変更
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 想定する検証範囲
+      description: Windows version、GPU、DICOM、installerなど
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: patient data、DICOM、CT、mask、secretを含めていません
+          required: true

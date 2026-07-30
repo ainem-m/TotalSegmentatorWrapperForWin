@@ -1,0 +1,55 @@
+Windows x64 binary-only dependency resolution
+
+status: PASS_WITH_INTERNAL_WHEEL
+python: 3.12.10 x64
+resolver: pip 25.0.1
+binary_policy: --only-binary=:all:
+wheel_count: 91
+customer_install_network: disabled
+customer_install_indexes: disabled
+
+exact primary runtime:
+  torch==2.11.0+cu126
+  torchvision==0.26.0+cu126
+  TotalSegmentator==2.14.0
+  nnunetv2==2.8.1
+  acvl-utils==0.2.6
+  totalsegmentator-wrapper-mac==0.3.0
+
+public closure gap:
+  TotalSegmentator==2.14.0 -> nnunetv2==2.8.1
+  -> acvl-utils>=0.2.6,<0.3
+  PyPI acvl-utils==0.2.6 publishes only:
+    acvl_utils-0.2.6.tar.gz
+    sha256 d6bd68a916fb2451ab3dd640b2494e545edc204c839ae1d4dd49f88f89999b74
+
+authorized internal wheel:
+  source: exact public sdist above
+  license: Apache-2.0
+  package content: pure Python
+  isolated builder:
+    setuptools==81.0.0
+    wheel==0.47.0
+    packaging==26.2
+    SOURCE_DATE_EPOCH=315532800
+  two-build reproducibility: PASS
+  filename: acvl_utils-0.2.6-py3-none-any.whl
+  sha256: 1beb5cc4907d3577d891faf4b11661423a3afbc71f4c3f95de9a5af41d6a0993
+
+first-party wrapper wheel:
+  two-build reproducibility: PASS
+  filename: totalsegmentator_wrapper_mac-0.3.0-py3-none-any.whl
+  sha256: c9b18d5a13a3167edd082227c8737ba110a9460d367195b2b8d1122eb817702d
+
+closure verification:
+  hashed requirements: requirements-win-x64-hashed.txt
+  complete wheel hashes: wheelhouse-sha256.txt
+  offline --no-index --find-links binary-only hash-checked dry-run: PASS
+  offline installation: PASS
+  pip check: PASS
+  production import matrix: PASS
+
+download notes:
+  Initial C-drive downloads failed for insufficient disk space.
+  The completed wheelhouse and pip cache were moved to a dedicated D-drive
+  spike directory, with TEMP/TMP/PIP_CACHE_DIR on that drive.

@@ -1,0 +1,35 @@
+name: windows-source
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build WPF shell
+        run: dotnet build native/windows/CoordinatorShell/CoordinatorShell.csproj -c Release
+
+      - name: Build Job Object supervisor
+        run: dotnet build native/windows/ProcessSupervisor/ProcessSupervisor.csproj -c Release
+
+      - name: Compile Python source
+        run: python -m compileall -q src
+
+      - name: Run Windows source contract
+        run: python -m unittest tests.test_windows_wpf_contract -v

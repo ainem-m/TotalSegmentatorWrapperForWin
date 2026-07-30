@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>tswm-windows-shell</AssemblyName>
+    <RootNamespace>TotalSegmentatorWrapper.Windows.CoordinatorShell</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="System.IO" />
+    <Compile Include="..\ProcessSupervisor\JobProcess.cs"
+             Link="ProcessSupervisor\JobProcess.cs" />
+    <Compile Include="..\ProcessSupervisor\NativeMethods.cs"
+             Link="ProcessSupervisor\NativeMethods.cs" />
+    <Resource Include="..\..\..\resources\model_comparison\*.png"
+              Link="model_comparison\%(Filename)%(Extension)" />
+    <Content Include="..\..\..\resources\model_comparison\ASSET_PROVENANCE.json"
+             Link="model_comparison\ASSET_PROVENANCE.json"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

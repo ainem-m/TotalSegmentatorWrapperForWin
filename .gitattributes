@@ -1,0 +1,20 @@
+* text=auto
+.gitattributes text eol=lf
+
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.ps1 text eol=crlf
+*.py text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+/resources/sample1/**/*.html text eol=lf
+/resources/sample1/**/*.js text eol=lf
+/resources/sample1/**/*.json text eol=lf
+
+*.png binary
+*.nii binary
+*.nii.gz binary

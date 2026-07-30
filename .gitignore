@@ -1,0 +1,14 @@
+.venv/
+.uv-cache/
+uv.lock
+.wrangler/
+.DS_Store
+runs/
+build/
+dist/
+*.egg-info/
+resources/demo_surface_preview/
+__pycache__/
+*.py[cod]
+native/windows/**/bin/
+native/windows/**/obj/

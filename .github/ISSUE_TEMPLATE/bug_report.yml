@@ -1,0 +1,55 @@
+name: Bug report
+description: Windows shell、coordinator、runtime、保存結果の不具合
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        patient data、DICOM、CT、mask、secret、絶対パス、raw third-party outputを添付しないでください。
+  - type: input
+    id: revision
+    attributes:
+      label: Versionまたはcommit
+      placeholder: 例 0.1.0 / abcdef0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows / GPU環境
+      description: Windows version/build、GPU、driver、VRAM
+      placeholder: 例 Windows 10 22H2 build 19045 / RTX 2060 / driver 572.83
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の結果
+    validations:
+      required: true
+  - type: input
+    id: error_code
+    attributes:
+      label: Typed error code
+      placeholder: 例 cuda_unavailable
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: patient data、DICOM、CT、mask、secretを含めていません
+          required: true
