@@ -14,6 +14,21 @@ public partial class App : Application
         try
         {
             var options = LaunchOptions.Parse(e.Args);
+            if (PortableLaunchGuard.IsArchiveDirectLaunch(
+                AppContext.BaseDirectory,
+                Path.GetTempPath()))
+            {
+                MessageBox.Show(
+                    "ZIP内から直接起動できません。"
+                    + Environment.NewLine
+                    + "ZIPを右クリックして「すべて展開」を選び、"
+                    + "展開先のEXEを起動してください。",
+                    "TotalSegmentator Wrapper for Windows Alpha",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                Shutdown(3);
+                return;
+            }
             if (options.CapturePath is not null
                 || options.EvidenceRunPath is not null
                 || options.EvidenceCancelPath is not null
@@ -27,12 +42,58 @@ public partial class App : Application
             }
             var configuration = ShellConfiguration.Load(
                 options.EngineeringConfigurationPath);
+            if (options.PortableSelfTest)
+            {
+                var runtime = configuration.CheckRuntime();
+                var dicom = configuration.CheckDicomRuntime();
+                var archiveGuard =
+                    PortableLaunchGuard.ContractSelfTest();
+                var localApplicationData =
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData);
+                var outputRootIsUserWritable =
+                    Path.IsPathFullyQualified(localApplicationData)
+                    && configuration.OutputRoot.StartsWith(
+                        Path.GetFullPath(localApplicationData)
+                            + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase);
+                var passed =
+                    runtime.Passed
+                    && dicom.Passed
+                    && archiveGuard
+                    && outputRootIsUserWritable;
+                var payload = new
+                {
+                    schema =
+                        "totalsegmentator_wrapper.windows_portable_self_test.v1",
+                    status = passed ? "pass" : "fail",
+                    runtime_and_models = runtime.Passed,
+                    dicom_binaries = dicom.Passed,
+                    archive_direct_launch_guard = archiveGuard,
+                    output_root_is_user_writable =
+                        outputRootIsUserWritable,
+                };
+                if (options.PortableEvidencePath is not null)
+                {
+                    await WriteJsonAsync(
+                        options.PortableEvidencePath,
+                        payload);
+                }
+                Console.WriteLine(JsonSerializer.Serialize(payload));
+                Shutdown(passed ? 0 : 1);
+                return;
+            }
             if (options.ContractSelfTest)
             {
                 var window = new MainWindow(configuration, "start");
                 var ui = window.UiContractEvidence();
                 var parserPassed = CoordinatorEvent.ContractSelfTest();
-                var passed = ui.Passed && parserPassed;
+                var archiveGuard =
+                    PortableLaunchGuard.ContractSelfTest();
+                var passed =
+                    ui.Passed
+                    && parserPassed
+                    && archiveGuard;
                 var payload = new
                 {
                     schema =
@@ -48,6 +109,7 @@ public partial class App : Application
                     button_count = ui.ButtonCount,
                     per_monitor_v2_manifest = true,
                     long_path_aware_manifest = true,
+                    portable_archive_guard = archiveGuard,
                     external_ui_automation = "unverified",
                 };
                 if (options.ContractEvidencePath is not null)
@@ -260,6 +322,8 @@ public partial class App : Application
         string? CapturePath,
         bool ContractSelfTest,
         string? ContractEvidencePath,
+        bool PortableSelfTest,
+        string? PortableEvidencePath,
         string? EvidenceRunPath,
         string? EvidenceCancelPath,
         string? EvidenceDentalSegmentatorPath,
@@ -276,6 +340,7 @@ public partial class App : Application
             string? previewScenario = null;
             string? capturePath = null;
             string? contractEvidencePath = null;
+            string? portableEvidencePath = null;
             string? evidenceRunPath = null;
             string? evidenceCancelPath = null;
             string? evidenceDentalSegmentatorPath = null;
@@ -286,6 +351,7 @@ public partial class App : Application
             string? evidenceDicomRescueFolder = null;
             string? evidenceDicomRescuePath = null;
             var contractSelfTest = false;
+            var portableSelfTest = false;
             for (var index = 0; index < args.Length; index++)
             {
                 switch (args[index])
@@ -329,6 +395,22 @@ public partial class App : Application
                             {
                                 throw new ArgumentException(
                                     "The contract evidence path must be absolute.");
+                            }
+                        }
+                        break;
+                    case "--portable-self-test":
+                        portableSelfTest = true;
+                        if (index + 1 < args.Length
+                            && !args[index + 1].StartsWith(
+                                "--",
+                                StringComparison.Ordinal))
+                        {
+                            portableEvidencePath = args[++index];
+                            if (!Path.IsPathFullyQualified(
+                                portableEvidencePath))
+                            {
+                                throw new ArgumentException(
+                                    "The portable evidence path must be absolute.");
                             }
                         }
                         break;
@@ -461,12 +543,28 @@ public partial class App : Application
                 throw new ArgumentException(
                     "The contract self-test cannot be combined with another mode.");
             }
+            if (portableSelfTest
+                && (contractSelfTest
+                    || capturePath is not null
+                    || evidenceRunPath is not null
+                    || evidenceCancelPath is not null
+                    || evidenceDentalSegmentatorPath is not null
+                    || evidenceIndividualTeethPath is not null
+                    || evidenceToothSegPath is not null
+                    || evidenceDicomPath is not null
+                    || evidenceDicomRescuePath is not null))
+            {
+                throw new ArgumentException(
+                    "The portable self-test cannot be combined with another mode.");
+            }
             return new LaunchOptions(
                 engineeringConfigurationPath,
                 previewScenario,
                 capturePath,
                 contractSelfTest,
                 contractEvidencePath,
+                portableSelfTest,
+                portableEvidencePath,
                 evidenceRunPath,
                 evidenceCancelPath,
                 evidenceDentalSegmentatorPath,

@@ -7,6 +7,7 @@ namespace TotalSegmentatorWrapper.Windows.CoordinatorShell;
 internal sealed record ShellConfiguration(
     string SupervisorPath,
     string CoordinatorPath,
+    IReadOnlyList<string> CoordinatorArguments,
     string CoordinatorWorkingDirectory,
     string BundledSamplePath,
     string OutputRoot,
@@ -43,10 +44,8 @@ internal sealed record ShellConfiguration(
             var runtime = Path.Combine(baseDirectory, "runtime", "python");
             return new ShellConfiguration(
                 Path.Combine(baseDirectory, "tswm-process-supervisor.exe"),
-                Path.Combine(
-                    runtime,
-                    "Scripts",
-                    "totalsegmentator-wrapper-coordinator.exe"),
+                Path.Combine(runtime, "python.exe"),
+                ["-m", "totalsegmentator_wrapper_mac.coordinator"],
                 runtime,
                 Path.Combine(
                     baseDirectory,
@@ -82,6 +81,7 @@ internal sealed record ShellConfiguration(
         return new ShellConfiguration(
             RequireAbsolute(payload.SupervisorPath, "supervisor_path"),
             RequireAbsolute(payload.CoordinatorPath, "coordinator_path"),
+            [],
             RequireAbsolute(
                 payload.CoordinatorWorkingDirectory,
                 "coordinator_working_directory"),

@@ -16,6 +16,7 @@ Python coordinator、DICOM normalizerを1つのリポジトリで管理します
 - Windows 11は未検証
 - 招待制アルファ向け自己署名MSIXのbuild経路と管理者install scriptを実装済み
 - 署名済みpayloadは検証済み、machine-level install/uninstallは未検証
+- 招待制アルファの推奨経路は、管理者権限・証明書登録が不要なportable ZIP
 - Store署名、update/rollback、clean-machine導入は未実装・未検証
 - 配布用Python runtime、wheelhouse、モデルcheckpointは同梱していません
 - fake、mock、CPU fallbackを実CUDA成功として扱いません
@@ -91,6 +92,11 @@ app-private Windows runtimeはpublic indexからcustomer machine上で解決す�
 検証結果と残項目は
 [`artifacts/spike/windows-alpha-msix/verification-report.md`](artifacts/spike/windows-alpha-msix/verification-report.md)
 に記録しています。
+
+管理者権限や証明書登録が不要な推奨alpha配布はportable ZIPです。
+[`docs/README_PORTABLE_JA.md`](docs/README_PORTABLE_JA.md)に従い、
+ZIPを展開して`tswm-windows-shell.exe`を起動します。MSIX経路は代替として
+保持します。
 
 ## データとプライバシー
 
