@@ -23,8 +23,8 @@ Measured engineering host details are recorded under
 
 - Windows 11 validation
 - clean-machine installation
-- installer and uninstall
-- code signing
+- invited-alpha machine-level MSIX installation and uninstall validation
+- trusted production or Store code signing
 - update and rollback
 - redistribution approval for every runtime binary and model
 - external UI Automation, high contrast, and non-96-DPI validation

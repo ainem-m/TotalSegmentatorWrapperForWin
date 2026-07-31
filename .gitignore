@@ -7,6 +7,11 @@ runs/
 build/
 dist/
 *.egg-info/
+*.pfx
+*.msix
+*.msixbundle
+artifacts/alpha-installer/
+packaging/windows-alpha/out/
 resources/demo_surface_preview/
 __pycache__/
 *.py[cod]

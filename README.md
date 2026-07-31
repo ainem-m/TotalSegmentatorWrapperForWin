@@ -14,7 +14,9 @@ Python coordinator、DICOM normalizerを1つのリポジトリで管理します
 - Windows 10 x64実機でstrict NVIDIA CUDA、Job Object、WPF、bundled sample、
   DICOM/MSVC vertical sliceを検証済み
 - Windows 11は未検証
-- installer、署名、update/rollback、clean-machine導入は未実装・未検証
+- 招待制アルファ向け自己署名MSIXのbuild経路と管理者install scriptを実装済み
+- 署名済みpayloadは検証済み、machine-level install/uninstallは未検証
+- Store署名、update/rollback、clean-machine導入は未実装・未検証
 - 配布用Python runtime、wheelhouse、モデルcheckpointは同梱していません
 - fake、mock、CPU fallbackを実CUDA成功として扱いません
 
@@ -82,6 +84,13 @@ app-private Windows runtimeはpublic indexからcustomer machine上で解決す�
 ありません。検証済みbinary-only/hash-locked closureは
 [`artifacts/spike/windows-runtime-cuda/requirements-win-x64-hashed.txt`](artifacts/spike/windows-runtime-cuda/requirements-win-x64-hashed.txt)
 に記録されていますが、社内wheelhouse自体は公開していません。
+
+限定アルファ配布のbuildと導入手順は
+[`docs/ALPHA_INSTALL_JA.md`](docs/ALPHA_INSTALL_JA.md)を参照してください。
+自己署名証明書の秘密鍵、MSIX、app-private runtime、モデルはGitへ追加しません。
+検証結果と残項目は
+[`artifacts/spike/windows-alpha-msix/verification-report.md`](artifacts/spike/windows-alpha-msix/verification-report.md)
+に記録しています。
 
 ## データとプライバシー
 
