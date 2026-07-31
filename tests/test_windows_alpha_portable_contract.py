@@ -23,6 +23,12 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
             script,
         )
         self.assertIn("Compression.ZipFile", script)
+        self.assertIn('$portableDirectoryName = "TSW"', script)
+        self.assertIn(
+            '$maximumInternalPathCharacters = 180',
+            script,
+        )
+        self.assertIn('"TSW-Alpha-{0}-win-x64.zip"', script)
         self.assertNotIn("Invoke-WebRequest", script)
         self.assertNotIn("Add-AppxPackage", script)
         self.assertNotIn("Import-Certificate", script)
@@ -102,6 +108,7 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         self.assertIn("証明書登録", manual)
         self.assertIn("インストールは不要", manual)
         self.assertIn("すべて展開", manual)
+        self.assertIn("Windows Explorerのパス長制限", manual)
         self.assertIn("SmartScreen", manual)
         self.assertIn("約5.6 GiB", manual)
         self.assertIn("非臨床", manual)

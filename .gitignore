@@ -11,6 +11,7 @@ dist/
 *.msix
 *.msixbundle
 TotalSegmentatorWrapperForWin-Alpha-Portable_*.zip
+TSW-Alpha-*-win-x64.zip
 artifacts/alpha-installer/
 artifacts/alpha-portable/
 packaging/windows-alpha/out/

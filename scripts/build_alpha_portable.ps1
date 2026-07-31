@@ -24,7 +24,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$portableDirectoryName = "TotalSegmentatorWrapperForWin-Alpha-Portable"
+$portableDirectoryName = "TSW"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 function Resolve-RequiredFile([string]$Path, [string]$Label) {
@@ -362,6 +362,21 @@ try {
             -LiteralPath (Join-Path $portableRoot "portable-manifest.json") `
             -Encoding utf8
 
+    $payloadFiles = @(Get-ChildItem $portableRoot -File -Recurse)
+    $longestInternalPath = (
+        $payloadFiles |
+        ForEach-Object {
+            "$portableDirectoryName\" +
+                $_.FullName.Substring($portableRoot.Length + 1)
+        } |
+        Sort-Object Length -Descending |
+        Select-Object -First 1
+    )
+    $maximumInternalPathCharacters = 180
+    if ($longestInternalPath.Length -gt $maximumInternalPathCharacters) {
+        throw "The portable payload exceeds the Windows Explorer path budget."
+    }
+
     $portableSelfTest = Join-Path `
         $evidenceRoot `
         "portable-self-test.json"
@@ -414,10 +429,10 @@ try {
         throw "Portable runtime diagnostic evidence did not pass."
     }
 
-    $payloadMeasure = Get-ChildItem $portableRoot -File -Recurse |
+    $payloadMeasure = $payloadFiles |
         Measure-Object Length -Sum
     $zipFileName =
-        "TotalSegmentatorWrapperForWin-Alpha-Portable_{0}_win-x64.zip" -f
+        "TSW-Alpha-{0}-win-x64.zip" -f
         $Version
     $zipPath = Join-Path $absoluteOutput $zipFileName
     if (Test-Path -LiteralPath $zipPath) {
@@ -455,6 +470,8 @@ try {
         zip_sha256 = $zipHash.Hash.ToLowerInvariant()
         extracted_file_count = $payloadMeasure.Count
         extracted_bytes = $payloadMeasure.Sum
+        maximum_internal_path_characters = $longestInternalPath.Length
+        internal_path_budget_characters = $maximumInternalPathCharacters
         administrator_required = $false
         powershell_required = $false
         certificate_registration_required = $false
