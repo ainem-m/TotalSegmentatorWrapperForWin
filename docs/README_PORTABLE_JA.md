@@ -12,7 +12,10 @@ PowerShell、証明書登録、インストールは不要です。
 1. ZIPファイルを右クリックし、「すべて展開」を選びます。
 2. 十分な空き容量があるローカルフォルダーへ展開します。
 3. 展開先の`TSW`フォルダーを開きます。
-4. `tswm-windows-shell.exe`をダブルクリックします。
+4. `START_HERE_TotalSegmentatorWrapperForWin.exe`をダブルクリックします。
+
+`tswm-process-supervisor.exe`は画面を持たない内部部品です。起動用EXEでは
+ありません。portable ZIPでは取り違えを避けるため、ルートには置きません。
 
 ZIP内のEXEを直接ダブルクリックしないでください。直接起動を検出した場合、
 アプリは処理を始めず「すべて展開」の案内を表示します。
@@ -21,7 +24,8 @@ ZIP内のEXEを直接ダブルクリックしないでください。直接起�
 してあります。古い`TotalSegmentatorWrapperForWin-Alpha-Portable_*.zip`は
 使用しないでください。
 
-Windows SmartScreenが表示される可能性があります。招待元と
+Windows SmartScreenが表示される可能性がありますが、表示されない環境も
+あります。警告の有無だけで成功・失敗を判断しないでください。招待元と
 `SHA256SUMS.txt`のハッシュを確認できた場合だけ、「詳細情報」から実行して
 ください。確認できないファイルは実行しないでください。
 

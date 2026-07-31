@@ -95,7 +95,8 @@ app-private Windows runtimeはpublic indexからcustomer machine上で解決す�
 
 管理者権限や証明書登録が不要な推奨alpha配布はportable ZIPです。
 [`docs/README_PORTABLE_JA.md`](docs/README_PORTABLE_JA.md)に従い、
-ZIPを展開して`tswm-windows-shell.exe`を起動します。MSIX経路は代替として
+ZIPを展開して`START_HERE_TotalSegmentatorWrapperForWin.exe`を起動します。
+MSIX経路は代替として
 保持します。
 
 ## データとプライバシー

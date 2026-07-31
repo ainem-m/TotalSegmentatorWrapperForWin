@@ -25,6 +25,15 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         self.assertIn("Compression.ZipFile", script)
         self.assertIn('$portableDirectoryName = "TSW"', script)
         self.assertIn(
+            '$portableEntrypoint = '
+            '"START_HERE_TotalSegmentatorWrapperForWin.exe"',
+            script,
+        )
+        self.assertIn(
+            'Join-Path $portableRoot "createdump.exe"',
+            script,
+        )
+        self.assertIn(
             '$maximumInternalPathCharacters = 180',
             script,
         )
@@ -68,6 +77,10 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         )
         self.assertIn("SpecialFolder.LocalApplicationData", configuration)
         self.assertIn(
+            '"runtime", "native"',
+            configuration,
+        )
+        self.assertIn(
             'distribution_directory_writable = $false',
             build,
         )
@@ -109,6 +122,12 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         self.assertIn("インストールは不要", manual)
         self.assertIn("すべて展開", manual)
         self.assertIn("Windows Explorerのパス長制限", manual)
+        self.assertIn(
+            "START_HERE_TotalSegmentatorWrapperForWin.exe",
+            manual,
+        )
+        self.assertIn("起動用EXEでは", manual)
+        self.assertIn("表示されない環境", manual)
         self.assertIn("SmartScreen", manual)
         self.assertIn("約5.6 GiB", manual)
         self.assertIn("非臨床", manual)

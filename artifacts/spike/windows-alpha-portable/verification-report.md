@@ -9,10 +9,10 @@ Distribution version: 0.1.0.0
 ## Package
 
 - ZIP: `TSW-Alpha-0.1.0.0-win-x64.zip`
-- ZIP bytes: `3447383528`
-- ZIP SHA-256: `c0a72f7f8b582ea58969cba909704f10b51a307d4ed36e2b022e71bd55a3a9bc`
-- Extracted files: `41954`
-- Extracted bytes: `5947841106` (about 5.54 GiB)
+- ZIP bytes: `3447349790`
+- ZIP SHA-256: `4ca6fb5176d36c2733725d02e450ac86700a926c1d9adc50aa9ec20e7491fb43`
+- Extracted files: `41953`
+- Extracted bytes: `5947770212` (about 5.54 GiB)
 - Maximum ZIP-internal file path: `177` characters
 - Longest path in the verification extraction: `223` characters
 - Administrator, PowerShell, certificate registration, and installation required: no
@@ -21,9 +21,13 @@ Distribution version: 0.1.0.0
 - Runtime and result writes to the extracted distribution: none
 
 The final ZIP was extracted into a new directory. After WPF diagnostics,
-Python diagnostics, DICOM probes, and real Sample 1 inference, all `41954`
+Python diagnostics, DICOM probes, and real Sample 1 inference, all `41953`
 relative paths and sizes still matched the ZIP, no files had been added, and
 no payload file had a post-extraction modification time.
+
+The extracted root contains exactly one executable:
+`START_HERE_TotalSegmentatorWrapperForWin.exe`. The headless Job Object
+supervisor is under `runtime/native` and is not presented as a launcher.
 
 ## Runtime
 
@@ -44,6 +48,7 @@ activation, ConvTranspose3d, synchronization, and finite-output checks on
 
 | Criterion | Result | Evidence |
 | --- | --- | --- |
+| Unambiguous launcher | PASS | exactly one root EXE; friendly file description/product/company metadata |
 | Extracted WPF startup/self-test | PASS | runtime/model, DICOM binary, archive guard, and user-output checks passed |
 | Windows path-length budget | PASS | short `TSW` root; maximum internal path 177; reported `dataset.json` extracted successfully |
 | ZIP-direct-launch guard contract | PASS | archive path is rejected with extraction guidance |
@@ -59,7 +64,7 @@ activation, ConvTranspose3d, synchronization, and finite-output checks on
 | NIfTI masks | PASS | 7 masks found; 6 were non-empty |
 | Offline preview | PASS | local assets only; no HTTP(S) or `file://` references |
 | DICOM binaries | PASS | normalizer `0.3.0` doctor passed with GDCM `3.2.6`; dcm2niix `v1.0.20260724` help probe exited `0` |
-| Distribution directory unchanged | PASS | all 41954 paths and sizes matched; zero post-extraction modifications |
+| Distribution directory unchanged | PASS | all 41953 paths and sizes matched; zero post-extraction modifications |
 | Private key/PFX absence | PASS | zero key-like files |
 | Python tests | PASS | 221 passed, 3 skipped |
 | WPF Release build | PASS | 0 warnings, 0 errors |
@@ -74,6 +79,11 @@ The run manifest recorded:
 - `resolved_device = cuda:0`
 - `fallback_allowed = false`
 - `fallback_occurred = false`
+
+The final launcher run used operation
+`b3ff8990-6e0c-4363-9b4e-e0a11b2f0057`. It emitted 23 valid JSONL events,
+exactly one terminal `operation_completed`, no absolute path or third-party
+output/tail in JSONL, and exited through the supervisor with OS exit code 0.
 
 TotalSegmentator model weights remained in the extracted read-only payload.
 Its mutable `config.json` was copied to the application-specific LocalAppData

@@ -42,8 +42,17 @@ internal sealed record ShellConfiguration(
         if (engineeringConfigPath is null)
         {
             var runtime = Path.Combine(baseDirectory, "runtime", "python");
+            var supervisor = Path.Combine(
+                nativeRuntime,
+                "tswm-process-supervisor.exe");
+            if (!File.Exists(supervisor))
+            {
+                supervisor = Path.Combine(
+                    baseDirectory,
+                    "tswm-process-supervisor.exe");
+            }
             return new ShellConfiguration(
-                Path.Combine(baseDirectory, "tswm-process-supervisor.exe"),
+                supervisor,
                 Path.Combine(runtime, "python.exe"),
                 ["-m", "totalsegmentator_wrapper_mac.coordinator"],
                 runtime,

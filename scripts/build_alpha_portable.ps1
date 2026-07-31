@@ -25,6 +25,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $portableDirectoryName = "TSW"
+$portableEntrypoint = "START_HERE_TotalSegmentatorWrapperForWin.exe"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 function Resolve-RequiredFile([string]$Path, [string]$Label) {
@@ -234,9 +235,12 @@ try {
             -o $supervisorPublish
     }
     Copy-Tree $shellPublish $portableRoot
-    Copy-Item `
-        (Join-Path $supervisorPublish "tswm-process-supervisor.exe") `
-        $portableRoot
+    Move-Item `
+        -LiteralPath (Join-Path $portableRoot "tswm-windows-shell.exe") `
+        -Destination (Join-Path $portableRoot $portableEntrypoint)
+    Remove-Item `
+        -LiteralPath (Join-Path $portableRoot "createdump.exe") `
+        -Force
 
     Copy-Tree $pythonRuntime (Join-Path $portableRoot "runtime\python")
     Copy-Tree $totalSegHome (Join-Path $portableRoot "models\totalseg-home")
@@ -246,6 +250,9 @@ try {
 
     $nativeRoot = Join-Path $portableRoot "runtime\native"
     New-Item -ItemType Directory -Path $nativeRoot -Force | Out-Null
+    Copy-Item `
+        (Join-Path $supervisorPublish "tswm-process-supervisor.exe") `
+        $nativeRoot
     Copy-Item $dicomNormalizer `
         (Join-Path $nativeRoot "totalsegmentator-wrapper-dicom-normalizer.exe")
     Copy-Item $dcm2niix (Join-Path $nativeRoot "dcm2niix.exe")
@@ -347,7 +354,7 @@ try {
             "totalsegmentator_wrapper.windows_alpha_portable_payload.v1"
         package_version = $Version
         architecture = "x64"
-        entrypoint = "tswm-windows-shell.exe"
+        entrypoint = $portableEntrypoint
         extraction_required = $true
         administrator_required = $false
         certificate_registration_required = $false
@@ -381,7 +388,7 @@ try {
         $evidenceRoot `
         "portable-self-test.json"
     $selfTestProcess = Start-Process `
-        -FilePath (Join-Path $portableRoot "tswm-windows-shell.exe") `
+        -FilePath (Join-Path $portableRoot $portableEntrypoint) `
         -ArgumentList @("--portable-self-test", $portableSelfTest) `
         -Wait `
         -PassThru `
@@ -401,7 +408,7 @@ try {
         $evidenceRoot `
         "supervisor-self-test.json"
     Invoke-Checked "Job Object supervisor self-test" {
-        & (Join-Path $portableRoot "tswm-process-supervisor.exe") `
+        & (Join-Path $nativeRoot "tswm-process-supervisor.exe") `
             self-test `
             --evidence $supervisorEvidence
     }

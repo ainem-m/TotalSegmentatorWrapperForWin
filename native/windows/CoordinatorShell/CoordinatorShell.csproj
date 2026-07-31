@@ -9,6 +9,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>tswm-windows-shell</AssemblyName>
+    <AssemblyTitle>TotalSegmentator Wrapper for Windows</AssemblyTitle>
+    <Product>TotalSegmentator Wrapper for Windows</Product>
+    <Company>TotalSegmentator Wrapper for Windows</Company>
+    <Description>Non-clinical invited alpha</Description>
     <RootNamespace>TotalSegmentatorWrapper.Windows.CoordinatorShell</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
