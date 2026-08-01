@@ -33,16 +33,21 @@ blocked until a real HTTPS model bundle location is approved.
 Model bundle candidate:
 
 - file: `totalseg-craniofacial-models-1.0.0.zip`
-- bytes: `365755104`
-- SHA-256: `03907c8ac0ea890f919a4ef9fc813e449f3365ae63693c50955cfaa99fafdaaa`
-- extracted model bytes: `413959450`
+- URL selected for upload:
+  `https://downloads.lacramy.com/totalsegmentator-wrapper-win/models/1.0.0/totalseg-craniofacial-models-1.0.0.zip`
+- bytes: `365760315`
+- SHA-256: `ec48c1d62768055ef90d3250a041bb98167ecadbc3b1c495a284459d670e38e6`
+- extracted model files: `19`
+- extracted model bytes: `413971462`
 - datasets: `Dataset115_mandible`,
   `Dataset297_TotalSegmentator_total_3mm_1559subj`
+- legal files: upstream Apache-2.0 text, model bundle NOTICE, and the pinned
+  TotalSegmentator task inventory
 
-Local full-bundle activation passed SHA-256 verification, safe extraction,
-required-file validation, ready-marker creation, atomic promotion, archive
-cleanup, and reported `resumed=true` without a network request by reusing a
-complete verified partial.
+Local final-bundle activation passed SHA-256 verification, safe extraction,
+required-model and legal-file validation, ready-marker creation, atomic
+promotion, archive cleanup, and reported `resumed=true` without a network
+request by reusing a complete verified partial.
 
 The pre-distribution portable packaging candidate was:
 
@@ -58,9 +63,11 @@ This is about 365.7 MB smaller than the complete offline ZIP. The app-private
 runtime remains the dominant size, so model-only on-demand delivery is not a
 small bootstrap installer.
 
-The candidate contains the reserved non-routable placeholder host
-`models.example.invalid`. It is evidence for packaging mechanics only and must
-not be given to testers. Rebuild after the approved HTTPS URL is known.
+That portable candidate contains the reserved non-routable placeholder host
+`models.example.invalid` and predates the legal-file requirement. It is
+evidence for packaging mechanics only, is superseded by the final model bundle,
+and must not be given to testers. Rebuild the portable ZIP after R2 upload and
+remote verification succeed.
 
 ## Checks
 
@@ -74,6 +81,7 @@ not be given to testers. Rebuild after the approved HTTPS URL is known.
 | path traversal blocks promotion | PASS |
 | PowerShell UTF-8 BOM manifest | PASS |
 | real model bundle validation and atomic activation | PASS |
+| Apache-2.0 text, model NOTICE, and task inventory present | PASS |
 | WPF model progress/result JSON contract | PASS |
 | WPF Release build | PASS, 0 warnings / 0 errors |
 | ProcessSupervisor Release build | PASS, 0 warnings / 0 errors |
@@ -86,7 +94,7 @@ not be given to testers. Rebuild after the approved HTTPS URL is known.
 
 ## Unverified and blocking
 
-- approved HTTPS hosting location and access policy
+- R2 upload and remote object immutability policy
 - manifest signing or another authenticity mechanism beyond the bundled
   SHA-256 manifest
 - real interrupted transfer and resume against the final hosting server

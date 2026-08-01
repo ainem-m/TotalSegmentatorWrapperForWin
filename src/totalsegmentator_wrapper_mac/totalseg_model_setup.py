@@ -22,6 +22,11 @@ REQUIRED_DATASETS = [
     "Dataset115_mandible",
     "Dataset297_TotalSegmentator_total_3mm_1559subj",
 ]
+REQUIRED_LEGAL_FILES = [
+    "TotalSegmentator-Apache-2.0.txt",
+    "TotalSegmentator-model-bundle-NOTICE.txt",
+    "totalsegmentator_task_inventory.json",
+]
 
 
 class ModelSetupError(RuntimeError):
@@ -53,6 +58,7 @@ def load_model_manifest(path: Path) -> dict[str, Any]:
     datasets = payload.get("datasets")
     if (
         datasets != REQUIRED_DATASETS
+        or payload.get("legal_files") != REQUIRED_LEGAL_FILES
         or payload["archive_root"] != "totalseg-home"
         or payload.get("fallback_allowed") is not False
     ):
@@ -68,7 +74,12 @@ def model_status(*, manifest: dict[str, Any], model_root: Path) -> dict[str, Any
         and marker.get("bundle_id") == manifest["bundle_id"]
         and marker.get("version") == manifest["version"]
         and marker.get("sha256") == manifest["sha256"]
-        and _validate_model_root(model_root, manifest["datasets"], raise_error=False)
+        and _validate_model_root(
+            model_root,
+            manifest["datasets"],
+            manifest["legal_files"],
+            raise_error=False,
+        )
     )
     if ready:
         return {"status": "ready", "model_state": "ready"}
@@ -101,7 +112,12 @@ def install_model_bundle(
         download = _download_bundle(manifest, archive, timeout_sec=timeout_sec)
         _emit("extract", "running", "モデルを展開しています。")
         extracted_root = _extract_bundle(archive, staging, manifest["archive_root"])
-        _validate_model_root(extracted_root, manifest["datasets"], raise_error=True)
+        _validate_model_root(
+            extracted_root,
+            manifest["datasets"],
+            manifest["legal_files"],
+            raise_error=True,
+        )
         _write_json(
             extracted_root / ".totalseg_model_ready.json",
             {
@@ -214,7 +230,13 @@ def _extract_bundle(archive_path: Path, staging: Path, archive_root: str) -> Pat
     return extracted
 
 
-def _validate_model_root(model_root: Path, datasets: list[str], *, raise_error: bool) -> bool:
+def _validate_model_root(
+    model_root: Path,
+    datasets: list[str],
+    legal_files: list[str],
+    *,
+    raise_error: bool,
+) -> bool:
     try:
         config = json.loads((model_root / "config.json").read_text(encoding="utf-8"))
         if config.get("send_usage_stats") is not False:
@@ -222,6 +244,10 @@ def _validate_model_root(model_root: Path, datasets: list[str], *, raise_error: 
         for dataset in datasets:
             root = model_root / "nnunet" / "results" / dataset
             if not root.is_dir() or not any(path.stat().st_size > 0 for path in root.rglob("checkpoint_final.pth")):
+                raise ValueError
+        for filename in legal_files:
+            path = model_root / "legal" / filename
+            if not path.is_file() or path.stat().st_size <= 0:
                 raise ValueError
         return True
     except (OSError, ValueError, json.JSONDecodeError):

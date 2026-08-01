@@ -16,11 +16,23 @@ $ErrorActionPreference = "Stop"
 
 $source = (Resolve-Path -LiteralPath $TotalSegmentatorHome).Path
 $output = [IO.Path]::GetFullPath($OutputDirectory)
+$repoRoot = Split-Path -Parent $PSScriptRoot
 $datasets = @(
     "Dataset115_mandible",
     "Dataset297_TotalSegmentator_total_3mm_1559subj"
 )
 $config = Join-Path $source "config.json"
+$legalFiles = [ordered]@{
+    "TotalSegmentator-Apache-2.0.txt" = Join-Path `
+        $repoRoot `
+        "resources\third_party\licenses\TotalSegmentator-Apache-2.0.txt"
+    "TotalSegmentator-model-bundle-NOTICE.txt" = Join-Path `
+        $repoRoot `
+        "resources\third_party\licenses\TotalSegmentator-model-bundle-NOTICE.txt"
+    "totalsegmentator_task_inventory.json" = Join-Path `
+        $repoRoot `
+        "resources\third_party\totalsegmentator_task_inventory.json"
+}
 if (-not (Test-Path -LiteralPath $config -PathType Leaf)) {
     throw "TotalSegmentator config.json was not found."
 }
@@ -52,6 +64,16 @@ $zipPath = Join-Path $output $zipName
 try {
     New-Item -ItemType Directory -Path $bundleRoot -Force | Out-Null
     Copy-Item -LiteralPath $config -Destination $bundleRoot
+    $legalRoot = Join-Path $bundleRoot "legal"
+    New-Item -ItemType Directory -Path $legalRoot -Force | Out-Null
+    foreach ($entry in $legalFiles.GetEnumerator()) {
+        if (-not (Test-Path -LiteralPath $entry.Value -PathType Leaf)) {
+            throw "A required TotalSegmentator legal file was not found."
+        }
+        Copy-Item -LiteralPath $entry.Value -Destination (
+            Join-Path $legalRoot $entry.Key
+        )
+    }
     foreach ($dataset in $datasets) {
         $destination = Join-Path $bundleRoot "nnunet\results\$dataset"
         New-Item -ItemType Directory -Path $destination -Force | Out-Null
@@ -85,6 +107,7 @@ try {
         size_bytes = (Get-Item -LiteralPath $zipPath).Length
         archive_root = "totalseg-home"
         datasets = $datasets
+        legal_files = @($legalFiles.Keys)
         fallback_allowed = $false
     }
     $manifestPath = Join-Path $output "totalseg-model-bundle.json"

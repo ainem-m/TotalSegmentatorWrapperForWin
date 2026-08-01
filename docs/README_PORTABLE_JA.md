@@ -51,6 +51,10 @@ SHA-256、bundle内容、必須checkpoint、利用統計無効設定を検証し
 ありません。モデルとpartialはLocalAppData配下に保存され、展開した配布
 フォルダーへは書き込みません。
 
+モデルbundleにはTotalSegmentatorのApache License 2.0本文、モデル配布NOTICE、
+許可されたtaskだけを記録したinventoryを含めます。これらが欠けたbundleは
+モデルとして有効化されません。
+
 完全オフライン版は引き続き残します。ネットワーク利用が許可されない評価では、
 ファイル名に`ondemand`を含まない完全オフライン版を使用してください。
 

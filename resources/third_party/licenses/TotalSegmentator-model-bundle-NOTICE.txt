@@ -1,0 +1,17 @@
+TotalSegmentator model bundle notice
+
+This bundle contains the model files used by TotalSegmentator 2.14.0 for:
+
+- task ID 115, craniofacial_structures / mandible; and
+- task ID 297, the 3 mm total model used as the robust-crop helper.
+
+Upstream project:
+https://github.com/wasserth/TotalSegmentator
+
+The application does not expose or distribute tasks listed by the pinned
+upstream version as commercial models. The included task inventory records the
+audited allowlist and upstream version. The model files are redistributed
+without modification. The upstream Apache License 2.0 text is included in the
+same legal directory.
+
+This application and bundle are for non-clinical research and evaluation only.

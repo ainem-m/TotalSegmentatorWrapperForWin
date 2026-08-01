@@ -19,6 +19,11 @@ from totalsegmentator_wrapper_mac.totalseg_model_setup import (
 
 
 DATASETS = ["Dataset115_mandible", "Dataset297_TotalSegmentator_total_3mm_1559subj"]
+LEGAL_FILES = [
+    "TotalSegmentator-Apache-2.0.txt",
+    "TotalSegmentator-model-bundle-NOTICE.txt",
+    "totalsegmentator_task_inventory.json",
+]
 
 
 class _Response:
@@ -136,6 +141,7 @@ def _manifest(payload: bytes) -> dict[str, object]:
         "size_bytes": len(payload),
         "archive_root": "totalseg-home",
         "datasets": DATASETS,
+        "legal_files": LEGAL_FILES,
         "fallback_allowed": False,
     }
 
@@ -145,6 +151,8 @@ def _write_bundle(path: Path, *, unsafe: bool = False) -> None:
         archive.writestr("totalseg-home/config.json", json.dumps({"send_usage_stats": False}))
         for dataset in DATASETS:
             archive.writestr(f"totalseg-home/nnunet/results/{dataset}/trainer/fold_0/checkpoint_final.pth", b"weights")
+        for filename in LEGAL_FILES:
+            archive.writestr(f"totalseg-home/legal/{filename}", b"notice")
         if unsafe:
             archive.writestr("totalseg-home/../../escaped.txt", "no")
 

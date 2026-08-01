@@ -92,6 +92,11 @@ if ($ModelDelivery -eq "OnDemand") {
         $modelBundle.size_bytes -le 0 -or
         $modelBundle.archive_root -ne "totalseg-home" -or
         $modelBundle.fallback_allowed -ne $false -or
+        (@($modelBundle.legal_files) -join ",") -ne (
+            "TotalSegmentator-Apache-2.0.txt," +
+            "TotalSegmentator-model-bundle-NOTICE.txt," +
+            "totalsegmentator_task_inventory.json"
+        ) -or
         (@($modelBundle.datasets) -join ",") -ne (
             "Dataset115_mandible," +
             "Dataset297_TotalSegmentator_total_3mm_1559subj"
