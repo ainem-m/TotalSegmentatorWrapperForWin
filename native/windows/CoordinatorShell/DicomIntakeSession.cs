@@ -346,6 +346,14 @@ internal sealed class DicomIntakeSession : IDisposable
                     conversionDirectory,
                     knownCandidate);
             }
+            catch (DicomVerificationException exception)
+            {
+                return DicomConversionResult.Failure(
+                    exception.ErrorCode,
+                    "DICOM変換後の3Dデータを検証できませんでした。",
+                    audit.OperationId,
+                    audit.WorkspaceDirectory);
+            }
             catch (Exception exception) when (
                 exception is IOException
                     or UnauthorizedAccessException
@@ -353,7 +361,7 @@ internal sealed class DicomIntakeSession : IDisposable
                     or InvalidDataException)
             {
                 return DicomConversionResult.Failure(
-                    "dicom_normalized_nifti_invalid",
+                    "dicom_verification_unavailable",
                     "変換後の3D作成用データを検証できませんでした。",
                     audit.OperationId,
                     audit.WorkspaceDirectory);
@@ -1449,111 +1457,135 @@ internal sealed class DicomIntakeSession : IDisposable
         string conversionDirectory,
         DicomCleanCandidate candidate)
     {
-        var metadataPath = Path.Combine(
-            conversionDirectory,
-            "convert_clean_metadata.json");
-        using var document = JsonDocument.Parse(
-            File.ReadAllText(metadataPath));
-        var root = document.RootElement;
-        RequireString(root, "schema", ConvertSchema);
-        RequireString(root, "status", "success");
+        var errorCode = "dicom_metadata_invalid";
+        try
+        {
+            var metadataPath = Path.Combine(
+                conversionDirectory,
+                "convert_clean_metadata.json");
+            using var document = JsonDocument.Parse(
+                File.ReadAllText(metadataPath));
+            var root = document.RootElement;
+            RequireString(root, "schema", ConvertSchema);
+            RequireString(root, "status", "success");
 
-        var selected = RequireObject(root, "selected_series");
-        RequireString(
-            selected,
-            "classification",
-            "original_ct_geometry_ok");
-        RequireString(
-            selected,
-            "series_instance_uid",
-            candidate.NativeSeriesKey);
-        if (RequirePositiveInt32(selected, "file_count")
-            != candidate.FileCount)
-        {
-            throw new InvalidDataException(
-                "The converted series file count changed.");
-        }
-        if (candidate.SeriesNumber.HasValue)
-        {
-            if (!selected.TryGetProperty(
-                    "series_number",
-                    out var selectedSeriesNumber)
-                || !selectedSeriesNumber.TryGetInt32(
-                    out var parsedSeriesNumber)
-                || parsedSeriesNumber != candidate.SeriesNumber.Value)
+            errorCode = "dicom_series_identity_mismatch";
+            var selected = RequireObject(root, "selected_series");
+            RequireString(
+                selected,
+                "classification",
+                "original_ct_geometry_ok");
+            RequireString(
+                selected,
+                "series_instance_uid",
+                candidate.NativeSeriesKey);
+            if (RequirePositiveInt32(selected, "file_count")
+                != candidate.FileCount)
+            {
+                throw new InvalidDataException(
+                    "The converted series file count changed.");
+            }
+            if (candidate.SeriesNumber.HasValue)
+            {
+                if (!selected.TryGetProperty(
+                        "series_number",
+                        out var selectedSeriesNumber)
+                    || !selectedSeriesNumber.TryGetInt32(
+                        out var parsedSeriesNumber)
+                    || parsedSeriesNumber != candidate.SeriesNumber.Value)
+                {
+                    throw new InvalidDataException(
+                        "The converted series number changed.");
+                }
+            }
+            else if (selected.TryGetProperty(
+                         "series_number",
+                         out var unexpectedSeriesNumber)
+                     && unexpectedSeriesNumber.ValueKind
+                         != JsonValueKind.Null)
             {
                 throw new InvalidDataException(
                     "The converted series number changed.");
             }
+
+            errorCode = "dicom_conversion_metadata_invalid";
+            var dcm2niix = RequireObject(root, "dcm2niix");
+            var dcm2niixExitCode = RequireInt32(
+                dcm2niix,
+                "returncode");
+            if (dcm2niixExitCode != 0)
+            {
+                throw new InvalidDataException(
+                    "dcm2niix did not succeed.");
+            }
+            var boundary = RequireObject(root, "product_boundary");
+            RequireFalse(boundary, "segmentation_started");
+            RequireFalse(boundary, "secondary_capture_rescue");
+
+            errorCode = "dicom_nifti_provenance_invalid";
+            var dcm2niixDirectory = Path.GetFullPath(
+                Path.Combine(conversionDirectory, "dcm2niix"));
+            if (!Directory.Exists(dcm2niixDirectory)
+                || !IsPathWithin(
+                    dcm2niixDirectory,
+                    Path.GetFullPath(conversionDirectory)))
+            {
+                throw new InvalidDataException(
+                    "The dcm2niix output directory is invalid.");
+            }
+            var niftiFiles = Directory.EnumerateFiles(
+                    dcm2niixDirectory,
+                    "*",
+                    SearchOption.AllDirectories)
+                .Where(IsNifti)
+                .Select(Path.GetFullPath)
+                .ToArray();
+
+            var outputs = RequireObject(root, "outputs");
+            var metadataDcm2niixDirectory = Path.GetFullPath(
+                RequireNonEmptyString(outputs, "dcm2niix_dir"));
+            var metadataNifti = Path.GetFullPath(
+                RequireNonEmptyString(outputs, "nifti"));
+            if (!PathEquals(
+                    metadataDcm2niixDirectory,
+                    dcm2niixDirectory))
+            {
+                throw new InvalidDataException(
+                    "The normalized NIfTI provenance is invalid.");
+            }
+            errorCode = "dicom_normalized_nifti_invalid";
+            var selectedNifti = VerifySelectedNifti(
+                niftiFiles,
+                metadataNifti,
+                dcm2niixDirectory);
+
+            errorCode = "dicom_mpr_preview_invalid";
+            var previewRoot = Path.GetFullPath(
+                Path.Combine(conversionDirectory, "mpr_preview"));
+            var previews = ReadVerifiedMprPreviews(
+                RequireArray(outputs, "mpr_preview"),
+                previewRoot);
+
+            return new VerifiedConversion(
+                selectedNifti,
+                dcm2niixExitCode,
+                previews);
         }
-        else if (selected.TryGetProperty(
-                     "series_number",
-                     out var unexpectedSeriesNumber)
-                 && unexpectedSeriesNumber.ValueKind
-                     != JsonValueKind.Null)
+        catch (DicomVerificationException)
         {
-            throw new InvalidDataException(
-                "The converted series number changed.");
+            throw;
         }
-
-        var dcm2niix = RequireObject(root, "dcm2niix");
-        var dcm2niixExitCode = RequireInt32(
-            dcm2niix,
-            "returncode");
-        if (dcm2niixExitCode != 0)
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or JsonException
+                or InvalidDataException
+                or ArgumentException)
         {
-            throw new InvalidDataException(
-                "dcm2niix did not succeed.");
+            throw new DicomVerificationException(
+                errorCode,
+                exception);
         }
-        var boundary = RequireObject(root, "product_boundary");
-        RequireFalse(boundary, "segmentation_started");
-        RequireFalse(boundary, "secondary_capture_rescue");
-
-        var dcm2niixDirectory = Path.GetFullPath(
-            Path.Combine(conversionDirectory, "dcm2niix"));
-        if (!Directory.Exists(dcm2niixDirectory)
-            || !IsPathWithin(
-                dcm2niixDirectory,
-                Path.GetFullPath(conversionDirectory)))
-        {
-            throw new InvalidDataException(
-                "The dcm2niix output directory is invalid.");
-        }
-        var niftiFiles = Directory.EnumerateFiles(
-                dcm2niixDirectory,
-                "*",
-                SearchOption.AllDirectories)
-            .Where(IsNifti)
-            .Select(Path.GetFullPath)
-            .ToArray();
-
-        var outputs = RequireObject(root, "outputs");
-        var metadataDcm2niixDirectory = Path.GetFullPath(
-            RequireNonEmptyString(outputs, "dcm2niix_dir"));
-        var metadataNifti = Path.GetFullPath(
-            RequireNonEmptyString(outputs, "nifti"));
-        if (!PathEquals(
-                metadataDcm2niixDirectory,
-                dcm2niixDirectory))
-        {
-            throw new InvalidDataException(
-                "The normalized NIfTI provenance is invalid.");
-        }
-        var selectedNifti = VerifySelectedNifti(
-            niftiFiles,
-            metadataNifti,
-            dcm2niixDirectory);
-
-        var previewRoot = Path.GetFullPath(
-            Path.Combine(conversionDirectory, "mpr_preview"));
-        var previews = ReadVerifiedMprPreviews(
-            RequireArray(outputs, "mpr_preview"),
-            previewRoot);
-
-        return new VerifiedConversion(
-            selectedNifti,
-            dcm2niixExitCode,
-            previews);
     }
 
     private static string VerifySelectedNifti(
@@ -1562,13 +1594,17 @@ internal sealed class DicomIntakeSession : IDisposable
         string dcm2niixDirectory)
     {
         var selected = Path.GetFullPath(metadataNifti);
-        if (!IsPathWithin(selected, dcm2niixDirectory)
-            || !File.Exists(selected)
+        if (!IsPathWithin(selected, dcm2niixDirectory))
+        {
+            throw new DicomVerificationException(
+                "dicom_nifti_provenance_invalid");
+        }
+        if (!File.Exists(selected)
             || new FileInfo(selected).Length <= 0
             || !niftiFiles.Any(path => PathEquals(path, selected)))
         {
-            throw new InvalidDataException(
-                "The normalized NIfTI output is invalid.");
+            throw new DicomVerificationException(
+                "dicom_normalized_nifti_invalid");
         }
         return selected;
     }
@@ -1597,7 +1633,9 @@ internal sealed class DicomIntakeSession : IDisposable
             {
                 VerifySelectedNifti(files, outside, output);
             }
-            catch (InvalidDataException)
+            catch (DicomVerificationException exception)
+                when (exception.ErrorCode
+                    == "dicom_nifti_provenance_invalid")
             {
                 outsideRejected = true;
             }
@@ -2073,6 +2111,20 @@ internal sealed class DicomIntakeSession : IDisposable
         string NiftiPath,
         int Dcm2niixExitCode,
         IReadOnlyList<DicomMprPreview> Previews);
+
+    private sealed class DicomVerificationException
+        : Exception
+    {
+        internal DicomVerificationException(
+            string errorCode,
+            Exception? innerException = null)
+            : base(errorCode, innerException)
+        {
+            ErrorCode = errorCode;
+        }
+
+        internal string ErrorCode { get; }
+    }
 
     private sealed record VerifiedRescueStack(
         string VolumePath,

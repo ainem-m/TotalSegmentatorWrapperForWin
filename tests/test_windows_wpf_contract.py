@@ -165,6 +165,16 @@ class WindowsWpfContractTests(unittest.TestCase):
             app,
         )
         self.assertNotIn("niftiFiles.Length != 1", intake)
+        for error_code in (
+            "dicom_metadata_invalid",
+            "dicom_series_identity_mismatch",
+            "dicom_conversion_metadata_invalid",
+            "dicom_nifti_provenance_invalid",
+            "dicom_normalized_nifti_invalid",
+            "dicom_mpr_preview_invalid",
+            "dicom_verification_unavailable",
+        ):
+            self.assertIn(f'"{error_code}"', intake)
         self.assertIn('"product_boundary"', intake)
         self.assertIn('"segmentation_started"', intake)
         self.assertIn('"secondary_capture_rescue"', intake)

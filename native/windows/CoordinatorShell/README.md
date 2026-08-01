@@ -77,10 +77,11 @@ limit terminates the whole Job. Process stdout and stderr are drained but never
 returned to the shell.
 
 Each audit uses a random UUID workspace below
-`<output_root>/.dicom-intake/`. A clean conversion must produce exactly one
-non-empty `.nii` or `.nii.gz` beneath its conversion output, with matching
-metadata and `segmentation_started=false`, before it can be passed to the
-unchanged NIfTI coordinator operation. A successful conversion also writes
+`<output_root>/.dicom-intake/`. A clean conversion must select a non-empty
+`.nii` or `.nii.gz` beneath its conversion output through the conversion
+metadata, with matching series metadata and `segmentation_started=false`,
+before it can be passed to the unchanged NIfTI coordinator operation. A
+successful conversion also writes
 `dicom-intake-manifest.json`; it contains no paths, DICOM identifiers,
 descriptions, or raw process output.
 

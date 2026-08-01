@@ -1,20 +1,20 @@
 # Windows alpha portable ZIP verification
 
-Date: 2026-07-31
+Date: 2026-08-01
 
 Host scope: Windows 10 x64 engineering host
 
-Distribution version: 0.1.0.1
+Distribution version: 0.1.0.2
 
 ## Package
 
-- ZIP: `TSW-Alpha-0.1.0.1-win-x64.zip`
-- ZIP bytes: `3447350979`
-- ZIP SHA-256: `c60c7d252db67463daaf3d2c6d5de1c23d254c8e3fc7bfecda760a349c8f299a`
+- ZIP: `TSW-Alpha-0.1.0.2-win-x64.zip`
+- ZIP bytes: `3447351259`
+- ZIP SHA-256: `7b505f7b928bddd1369e74fa999204611f50ce64af8f9ed45752af5b4ef241cb`
 - Extracted files: `41953`
-- Extracted bytes: `5947772332` (about 5.54 GiB)
+- Extracted bytes: `5947773300` (about 5.54 GiB)
 - Maximum ZIP-internal file path: `177` characters
-- Longest path in the verification extraction: `223` characters
+- Longest path in the verification extraction: `215` characters
 - Administrator, PowerShell, certificate registration, and installation required: no
 - Python or .NET dependency resolution from a public index: no
 - Private key, PFX, or key-like PEM in the ZIP: none
@@ -22,8 +22,8 @@ Distribution version: 0.1.0.1
 
 The final ZIP was extracted into a new directory. After WPF diagnostics,
 Python diagnostics, DICOM probes, and real Sample 1 inference, all `41953`
-relative paths and sizes still matched the ZIP, no files had been added, and
-no payload file had a post-extraction modification time.
+relative paths and sizes still matched the ZIP; no payload file was added or
+removed.
 
 The extracted root contains exactly one executable:
 `START_HERE_TotalSegmentatorWrapperForWin.exe`. The headless Job Object
@@ -50,6 +50,7 @@ activation, ConvTranspose3d, synchronization, and finite-output checks on
 | --- | --- | --- |
 | Unambiguous launcher | PASS | exactly one root EXE; friendly file description/product/company metadata |
 | macOS-compatible DICOM NIfTI selection | PASS | normalizer metadata selects one nonempty in-boundary NIfTI even when sibling NIfTIs exist; outside paths remain rejected |
+| PHI-safe typed DICOM verification failures | PASS | metadata, series identity, conversion boundary, NIfTI provenance/content, and MPR preview failures have distinct safe error codes; unknown verification I/O uses a separate unavailable code |
 | Extracted WPF startup/self-test | PASS | runtime/model, DICOM binary, archive guard, and user-output checks passed |
 | Windows path-length budget | PASS | short `TSW` root; maximum internal path 177; reported `dataset.json` extracted successfully |
 | ZIP-direct-launch guard contract | PASS | archive path is rejected with extraction guidance |
@@ -65,7 +66,7 @@ activation, ConvTranspose3d, synchronization, and finite-output checks on
 | NIfTI masks | PASS | 7 masks found; 6 were non-empty |
 | Offline preview | PASS | local assets only; no HTTP(S) or `file://` references |
 | DICOM binaries | PASS | normalizer `0.3.0` doctor passed with GDCM `3.2.6`; dcm2niix `v1.0.20260724` help probe exited `0` |
-| Distribution directory unchanged | PASS | all 41953 paths and sizes matched; zero post-extraction modifications |
+| Distribution directory unchanged | PASS | all 41953 paths and sizes matched; no added or missing files |
 | Private key/PFX absence | PASS | zero key-like files |
 | Python tests | PASS | 221 passed, 3 skipped |
 | WPF Release build | PASS | 0 warnings, 0 errors |
@@ -82,7 +83,7 @@ The run manifest recorded:
 - `fallback_occurred = false`
 
 The final launcher run used operation
-`3643e3b1-c7e4-4d3d-b916-eca6b4a16e9c`. It emitted 24 valid JSONL events,
+`ea2b571c-f21b-4567-85de-68fd0eb8b719`. It emitted 24 valid JSONL events,
 exactly one terminal `operation_completed`, no absolute path or third-party
 output/tail in JSONL, and exited through the supervisor with OS exit code 0.
 
