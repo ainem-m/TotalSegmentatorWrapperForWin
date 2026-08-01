@@ -45,6 +45,8 @@ public partial class App : Application
             if (options.PortableSelfTest)
             {
                 var runtime = configuration.CheckRuntime();
+                var bootstrapRuntime =
+                    configuration.CheckBootstrapRuntime();
                 var dicom = configuration.CheckDicomRuntime();
                 var archiveGuard =
                     PortableLaunchGuard.ContractSelfTest();
@@ -58,7 +60,10 @@ public partial class App : Application
                             + Path.DirectorySeparatorChar,
                         StringComparison.OrdinalIgnoreCase);
                 var passed =
-                    runtime.Passed
+                    (runtime.Passed
+                        || (bootstrapRuntime.Passed
+                            && configuration
+                                .CanPrepareTotalSegmentatorModel))
                     && dicom.Passed
                     && archiveGuard
                     && outputRootIsUserWritable;
@@ -68,6 +73,9 @@ public partial class App : Application
                         "totalsegmentator_wrapper.windows_portable_self_test.v1",
                     status = passed ? "pass" : "fail",
                     runtime_and_models = runtime.Passed,
+                    bootstrap_runtime = bootstrapRuntime.Passed,
+                    on_demand_model_available =
+                        configuration.CanPrepareTotalSegmentatorModel,
                     dicom_binaries = dicom.Passed,
                     archive_direct_launch_guard = archiveGuard,
                     output_root_is_user_writable =
@@ -93,11 +101,14 @@ public partial class App : Application
                 var metadataNiftiSelection =
                     DicomIntakeSession
                         .MetadataNiftiSelectionContractSelfTest();
+                var modelSetupProtocol =
+                    ModelSetupSession.ContractSelfTest();
                 var passed =
                     ui.Passed
                     && parserPassed
                     && archiveGuard
-                    && metadataNiftiSelection;
+                    && metadataNiftiSelection
+                    && modelSetupProtocol;
                 var payload = new
                 {
                     schema =
@@ -116,6 +127,7 @@ public partial class App : Application
                     portable_archive_guard = archiveGuard,
                     metadata_nifti_selection =
                         metadataNiftiSelection,
+                    model_setup_protocol = modelSetupProtocol,
                     external_ui_automation = "unverified",
                 };
                 if (options.ContractEvidencePath is not null)

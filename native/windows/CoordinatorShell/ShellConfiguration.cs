@@ -15,7 +15,8 @@ internal sealed record ShellConfiguration(
     string DicomNormalizerPath,
     string Dcm2niixPath,
     string DentalSegmentatorModelRoot,
-    string ToothSegModelRoot)
+    string ToothSegModelRoot,
+    string TotalSegmentatorModelManifestPath)
 {
     internal string BundledSamplePreviewPath
     {
@@ -42,6 +43,16 @@ internal sealed record ShellConfiguration(
         if (engineeringConfigPath is null)
         {
             var runtime = Path.Combine(baseDirectory, "runtime", "python");
+            var bundledTotalSegmentatorHome = Path.Combine(
+                baseDirectory,
+                "models",
+                "totalseg-home");
+            var userTotalSegmentatorHome = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "TotalSegmentatorWrapperWindows",
+                "models",
+                "totalseg-home");
             var supervisor = Path.Combine(
                 nativeRuntime,
                 "tswm-process-supervisor.exe");
@@ -66,13 +77,19 @@ internal sealed record ShellConfiguration(
                         Environment.SpecialFolder.LocalApplicationData),
                     "TotalSegmentatorWrapperWindows",
                     "runs"),
-                Path.Combine(baseDirectory, "models", "totalseg-home"),
+                Directory.Exists(bundledTotalSegmentatorHome)
+                    ? bundledTotalSegmentatorHome
+                    : userTotalSegmentatorHome,
                 Path.Combine(
                     nativeRuntime,
                     "totalsegmentator-wrapper-dicom-normalizer.exe"),
                 Path.Combine(nativeRuntime, "dcm2niix.exe"),
                 Path.Combine(baseDirectory, "models", "dentalseg"),
-                Path.Combine(baseDirectory, "models", "toothseg"));
+                Path.Combine(baseDirectory, "models", "toothseg"),
+                Path.Combine(
+                    baseDirectory,
+                    "models",
+                    "totalseg-model-bundle.json"));
         }
 
         var absoluteConfigPath = Path.GetFullPath(engineeringConfigPath);
@@ -114,10 +131,46 @@ internal sealed record ShellConfiguration(
             OptionalAbsolute(
                 payload.ToothSegModelRoot,
                 Path.Combine(baseDirectory, "models", "toothseg"),
-                "toothseg_model_root"));
+                "toothseg_model_root"),
+            OptionalAbsolute(
+                payload.TotalSegmentatorModelManifestPath,
+                Path.Combine(
+                    baseDirectory,
+                    "models",
+                    "totalseg-model-bundle.json"),
+                "totalseg_model_manifest_path"));
     }
 
+    internal bool TotalSegmentatorModelReady
+    {
+        get
+        {
+            var failures = new List<string>();
+            CheckDirectory(
+                TotalSegmentatorHome,
+                "TotalSegmentator model",
+                failures);
+            CheckTotalSegmentatorCache(failures);
+            return failures.Count == 0;
+        }
+    }
+
+    internal bool CanPrepareTotalSegmentatorModel =>
+        !TotalSegmentatorModelReady
+        && File.Exists(CoordinatorPath)
+        && File.Exists(TotalSegmentatorModelManifestPath);
+
     internal RuntimeCheckResult CheckRuntime()
+    {
+        return CheckRuntime(includeModels: true);
+    }
+
+    internal RuntimeCheckResult CheckBootstrapRuntime()
+    {
+        return CheckRuntime(includeModels: false);
+    }
+
+    private RuntimeCheckResult CheckRuntime(bool includeModels)
     {
         var failures = new List<string>();
         CheckFile(SupervisorPath, "Windowsの処理管理機能", failures);
@@ -131,11 +184,14 @@ internal sealed record ShellConfiguration(
             BundledSamplePreviewPath,
             "同梱Sample 1の3Dプレビュー",
             failures);
-        CheckDirectory(
-            TotalSegmentatorHome,
-            "同梱済みのモデル",
-            failures);
-        CheckTotalSegmentatorCache(failures);
+        if (includeModels)
+        {
+            CheckDirectory(
+                TotalSegmentatorHome,
+                "同梱済みのモデル",
+                failures);
+            CheckTotalSegmentatorCache(failures);
+        }
         try
         {
             Directory.CreateDirectory(OutputRoot);
@@ -513,6 +569,9 @@ internal sealed record ShellConfiguration(
 
         [JsonPropertyName("toothseg_model_root")]
         public string? ToothSegModelRoot { get; init; }
+
+        [JsonPropertyName("totalseg_model_manifest_path")]
+        public string? TotalSegmentatorModelManifestPath { get; init; }
     }
 }
 

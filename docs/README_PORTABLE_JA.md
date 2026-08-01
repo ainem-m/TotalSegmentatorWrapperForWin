@@ -33,6 +33,27 @@ Windows SmartScreenが表示される可能性がありますが、表示され�
 ユーザーが書き込めるLocalAppData配下または画面で選択した保存先へ作成され、
 展開した配布フォルダーへは保存しません。
 
+## オンデマンドモデル版
+
+ファイル名に`ondemand`を含む軽量版は、WPF、app-private Python/CUDA、
+TotalSegmentator、Job Object supervisor、DICOM binaries、Sample 1を同梱し、
+モデルcheckpointだけを初回利用時に取得します。Python依存をpublic indexから
+解決する方式ではありません。
+
+初回の「モデルを取得して準備」で、固定manifestに記録されたHTTPS取得元、
+exact version、ファイルサイズ、SHA-256を使用します。ダウンロードが中断した
+場合は`.part`をユーザー領域に保持し、もう一度押すとHTTP Rangeで続きから
+再開します。サーバーが安全な再開に対応しない場合は同じpartialへ追記せず、
+先頭から取得し直します。
+
+SHA-256、bundle内容、必須checkpoint、利用統計無効設定を検証し終わるまで、
+モデルは有効化されません。失敗時にCPUや別モデルへ切り替えることも
+ありません。モデルとpartialはLocalAppData配下に保存され、展開した配布
+フォルダーへは書き込みません。
+
+完全オフライン版は引き続き残します。ネットワーク利用が許可されない評価では、
+ファイル名に`ondemand`を含まない完全オフライン版を使用してください。
+
 ## 動作範囲
 
 - Windows 10/11 x64

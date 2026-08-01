@@ -202,6 +202,24 @@ class WindowsWpfContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
+        model_setup = (SHELL / "ModelSetupSession.cs").read_text(
+            encoding="utf-8"
+        )
+        configuration = (SHELL / "ShellConfiguration.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("TOTALSEG_MODEL_PREP_PROGRESS", model_setup)
+        self.assertIn("ContractSelfTest", model_setup)
+        self.assertIn("fallback_allowed", model_setup)
+        self.assertIn("StandardOutputEncoding = new UTF8Encoding(false)", model_setup)
+        self.assertIn('startInfo.Environment["PYTHONUTF8"] = "1"', model_setup)
+        self.assertIn("Kill(entireProcessTree: true)", model_setup)
+        self.assertIn("CanPrepareTotalSegmentatorModel", configuration)
+        self.assertIn("TotalSegmentatorModelManifestPath", configuration)
+        self.assertIn("モデルを取得して準備", code)
+        self.assertNotIn('mode = "auto"', model_setup)
+        self.assertNotIn('mode = "cpu"', model_setup)
+
         automation_names = (
             "準備を始める",
             "Sampleから始める",

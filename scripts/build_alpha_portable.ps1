@@ -16,6 +16,9 @@ param(
     [string]$WorkRoot,
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
+    [ValidateSet("Bundled", "OnDemand")]
+    [string]$ModelDelivery = "Bundled",
+    [string]$ModelBundleManifestPath,
     [ValidatePattern("^\d+\.\d+\.\d+\.\d+$")]
     [string]$Version = "0.1.0.0",
     [switch]$KeepStaging
@@ -73,6 +76,30 @@ $dicomNormalizer = Resolve-RequiredFile `
     $DicomNormalizerPath `
     "DICOM normalizer"
 $dcm2niix = Resolve-RequiredFile $Dcm2niixPath "dcm2niix"
+$modelBundleManifest = $null
+$modelBundle = $null
+if ($ModelDelivery -eq "OnDemand") {
+    $modelBundleManifest = Resolve-RequiredFile `
+        $ModelBundleManifestPath `
+        "TotalSegmentator model bundle manifest"
+    $modelBundle = Get-Content -LiteralPath $modelBundleManifest -Raw |
+        ConvertFrom-Json
+    if (
+        $modelBundle.schema -ne
+            "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1" -or
+        $modelBundle.url -notmatch "^https://" -or
+        $modelBundle.sha256 -notmatch "^[0-9a-f]{64}$" -or
+        $modelBundle.size_bytes -le 0 -or
+        $modelBundle.archive_root -ne "totalseg-home" -or
+        $modelBundle.fallback_allowed -ne $false -or
+        (@($modelBundle.datasets) -join ",") -ne (
+            "Dataset115_mandible," +
+            "Dataset297_TotalSegmentator_total_3mm_1559subj"
+        )
+    ) {
+        throw "The TotalSegmentator model bundle manifest is invalid."
+    }
+}
 
 $requiredDotNetPackages = [ordered]@{
     "microsoft.aspnetcore.app.runtime.win-x64.10.0.10.nupkg" =
@@ -243,7 +270,17 @@ try {
         -Force
 
     Copy-Tree $pythonRuntime (Join-Path $portableRoot "runtime\python")
-    Copy-Tree $totalSegHome (Join-Path $portableRoot "models\totalseg-home")
+    if ($ModelDelivery -eq "Bundled") {
+        Copy-Tree $totalSegHome `
+            (Join-Path $portableRoot "models\totalseg-home")
+    }
+    else {
+        $modelsRoot = Join-Path $portableRoot "models"
+        New-Item -ItemType Directory -Path $modelsRoot -Force | Out-Null
+        Copy-Item `
+            -LiteralPath $modelBundleManifest `
+            -Destination (Join-Path $modelsRoot "totalseg-model-bundle.json")
+    }
     Copy-Tree `
         (Join-Path $repoRoot "resources\sample1") `
         (Join-Path $portableRoot "sample1")
@@ -361,7 +398,10 @@ try {
         install_required = $false
         results_location = "user_selected_or_local_app_data"
         distribution_directory_writable = $false
-        bundled_totalsegmentator_datasets = $requiredDatasets
+        model_delivery = $ModelDelivery.ToLowerInvariant()
+        bundled_totalsegmentator_datasets = @(
+            if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
+        )
         bundled_additional_models = @()
     } |
         ConvertTo-Json -Depth 5 |
@@ -425,7 +465,14 @@ try {
                 $repoRoot `
                 "scripts\write_portable_runtime_diagnostic.py") `
             --output $runtimeDiagnostic `
-            --totalseg-home (Join-Path $portableRoot "models\totalseg-home") `
+            --totalseg-home $(
+                if ($ModelDelivery -eq "Bundled") {
+                    Join-Path $portableRoot "models\totalseg-home"
+                }
+                else {
+                    $totalSegHome
+                }
+            ) `
             --cuda-index 0
     }
     $diagnosticPayload = Get-Content `
@@ -438,9 +485,12 @@ try {
 
     $payloadMeasure = $payloadFiles |
         Measure-Object Length -Sum
-    $zipFileName =
-        "TSW-Alpha-{0}-win-x64.zip" -f
-        $Version
+    $zipFileName = if ($ModelDelivery -eq "OnDemand") {
+        "TSW-Alpha-{0}-ondemand-win-x64.zip" -f $Version
+    }
+    else {
+        "TSW-Alpha-{0}-win-x64.zip" -f $Version
+    }
     $zipPath = Join-Path $absoluteOutput $zipFileName
     if (Test-Path -LiteralPath $zipPath) {
         Remove-Item -LiteralPath $zipPath -Force
@@ -489,7 +539,22 @@ try {
         python_runtime_network_resolution = $false
         dotnet_runtime_package_network_resolution = $false
         dotnet_runtime_packages = @($dotNetPackageEvidence)
-        bundled_totalsegmentator_datasets = $requiredDatasets
+        bundled_totalsegmentator_datasets = @(
+            if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
+        )
+        model_delivery = $ModelDelivery.ToLowerInvariant()
+        model_bundle_version = if ($null -eq $modelBundle) {
+            $null
+        }
+        else {
+            $modelBundle.version
+        }
+        model_bundle_sha256 = if ($null -eq $modelBundle) {
+            $null
+        }
+        else {
+            $modelBundle.sha256
+        }
         bundled_additional_models = @()
         portable_self_test = "pass"
         job_object_supervisor_self_test = "pass"

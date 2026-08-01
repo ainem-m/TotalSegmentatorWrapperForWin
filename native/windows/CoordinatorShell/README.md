@@ -57,6 +57,13 @@ The JSON keys are `supervisor_path`, `coordinator_path`,
 override the two app-private native defaults above. Optional
 `dentalseg_model_root` overrides the app-private DentalSegmentator model root.
 Optional `toothseg_model_root` overrides the app-private ToothSeg model root.
+Optional `totalseg_model_manifest_path` overrides the fixed on-demand
+TotalSegmentator model bundle manifest. A portable payload without bundled
+TotalSegmentator checkpoints stores the verified model below LocalAppData.
+Its preparation process retains a matching `.part` download for HTTP Range
+resume, verifies exact size and SHA-256, validates both required datasets in
+staging, and only then atomically publishes the model. It never starts CPU or
+another model after a preparation failure.
 Existing NIfTI-only engineering configurations remain valid. This
 configuration is for spike evidence only and is not a dependency installation
 mechanism.
