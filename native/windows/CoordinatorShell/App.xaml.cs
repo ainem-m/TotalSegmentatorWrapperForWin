@@ -90,10 +90,14 @@ public partial class App : Application
                 var parserPassed = CoordinatorEvent.ContractSelfTest();
                 var archiveGuard =
                     PortableLaunchGuard.ContractSelfTest();
+                var metadataNiftiSelection =
+                    DicomIntakeSession
+                        .MetadataNiftiSelectionContractSelfTest();
                 var passed =
                     ui.Passed
                     && parserPassed
-                    && archiveGuard;
+                    && archiveGuard
+                    && metadataNiftiSelection;
                 var payload = new
                 {
                     schema =
@@ -110,6 +114,8 @@ public partial class App : Application
                     per_monitor_v2_manifest = true,
                     long_path_aware_manifest = true,
                     portable_archive_guard = archiveGuard,
+                    metadata_nifti_selection =
+                        metadataNiftiSelection,
                     external_ui_automation = "unverified",
                 };
                 if (options.ContractEvidencePath is not null)

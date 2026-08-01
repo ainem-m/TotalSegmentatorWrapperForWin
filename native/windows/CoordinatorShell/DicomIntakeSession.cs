@@ -1526,13 +1526,6 @@ internal sealed class DicomIntakeSession : IDisposable
             .Where(IsNifti)
             .Select(Path.GetFullPath)
             .ToArray();
-        if (niftiFiles.Length != 1
-            || new FileInfo(niftiFiles[0]).Length <= 0
-            || !IsPathWithin(niftiFiles[0], dcm2niixDirectory))
-        {
-            throw new InvalidDataException(
-                "The normalized NIfTI output is invalid.");
-        }
 
         var outputs = RequireObject(root, "outputs");
         var metadataDcm2niixDirectory = Path.GetFullPath(
@@ -1541,15 +1534,15 @@ internal sealed class DicomIntakeSession : IDisposable
             RequireNonEmptyString(outputs, "nifti"));
         if (!PathEquals(
                 metadataDcm2niixDirectory,
-                dcm2niixDirectory)
-            || !PathEquals(metadataNifti, niftiFiles[0])
-            || !IsPathWithin(
-                metadataNifti,
                 dcm2niixDirectory))
         {
             throw new InvalidDataException(
                 "The normalized NIfTI provenance is invalid.");
         }
+        var selectedNifti = VerifySelectedNifti(
+            niftiFiles,
+            metadataNifti,
+            dcm2niixDirectory);
 
         var previewRoot = Path.GetFullPath(
             Path.Combine(conversionDirectory, "mpr_preview"));
@@ -1558,9 +1551,65 @@ internal sealed class DicomIntakeSession : IDisposable
             previewRoot);
 
         return new VerifiedConversion(
-            niftiFiles[0],
+            selectedNifti,
             dcm2niixExitCode,
             previews);
+    }
+
+    private static string VerifySelectedNifti(
+        IReadOnlyList<string> niftiFiles,
+        string metadataNifti,
+        string dcm2niixDirectory)
+    {
+        var selected = Path.GetFullPath(metadataNifti);
+        if (!IsPathWithin(selected, dcm2niixDirectory)
+            || !File.Exists(selected)
+            || new FileInfo(selected).Length <= 0
+            || !niftiFiles.Any(path => PathEquals(path, selected)))
+        {
+            throw new InvalidDataException(
+                "The normalized NIfTI output is invalid.");
+        }
+        return selected;
+    }
+
+    internal static bool MetadataNiftiSelectionContractSelfTest()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"tswm-dicom-selection-{Guid.NewGuid():N}");
+        var output = Path.Combine(root, "dcm2niix");
+        var outside = Path.Combine(root, "outside.nii");
+        try
+        {
+            Directory.CreateDirectory(output);
+            var first = Path.Combine(output, "clean_raw.nii");
+            var selected = Path.Combine(output, "clean_raw_2.nii");
+            File.WriteAllBytes(first, [1]);
+            File.WriteAllBytes(selected, [2]);
+            File.WriteAllBytes(outside, [3]);
+            var files = new[] { first, selected };
+            var multipleOutputAccepted = PathEquals(
+                VerifySelectedNifti(files, selected, output),
+                selected);
+            var outsideRejected = false;
+            try
+            {
+                VerifySelectedNifti(files, outside, output);
+            }
+            catch (InvalidDataException)
+            {
+                outsideRejected = true;
+            }
+            return multipleOutputAccepted && outsideRejected;
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     private static IReadOnlyList<DicomMprPreview>

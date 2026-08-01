@@ -4,15 +4,15 @@ Date: 2026-07-31
 
 Host scope: Windows 10 x64 engineering host
 
-Distribution version: 0.1.0.0
+Distribution version: 0.1.0.1
 
 ## Package
 
-- ZIP: `TSW-Alpha-0.1.0.0-win-x64.zip`
-- ZIP bytes: `3447349790`
-- ZIP SHA-256: `4ca6fb5176d36c2733725d02e450ac86700a926c1d9adc50aa9ec20e7491fb43`
+- ZIP: `TSW-Alpha-0.1.0.1-win-x64.zip`
+- ZIP bytes: `3447350979`
+- ZIP SHA-256: `c60c7d252db67463daaf3d2c6d5de1c23d254c8e3fc7bfecda760a349c8f299a`
 - Extracted files: `41953`
-- Extracted bytes: `5947770212` (about 5.54 GiB)
+- Extracted bytes: `5947772332` (about 5.54 GiB)
 - Maximum ZIP-internal file path: `177` characters
 - Longest path in the verification extraction: `223` characters
 - Administrator, PowerShell, certificate registration, and installation required: no
@@ -49,6 +49,7 @@ activation, ConvTranspose3d, synchronization, and finite-output checks on
 | Criterion | Result | Evidence |
 | --- | --- | --- |
 | Unambiguous launcher | PASS | exactly one root EXE; friendly file description/product/company metadata |
+| macOS-compatible DICOM NIfTI selection | PASS | normalizer metadata selects one nonempty in-boundary NIfTI even when sibling NIfTIs exist; outside paths remain rejected |
 | Extracted WPF startup/self-test | PASS | runtime/model, DICOM binary, archive guard, and user-output checks passed |
 | Windows path-length budget | PASS | short `TSW` root; maximum internal path 177; reported `dataset.json` extracted successfully |
 | ZIP-direct-launch guard contract | PASS | archive path is rejected with extraction guidance |
@@ -81,7 +82,7 @@ The run manifest recorded:
 - `fallback_occurred = false`
 
 The final launcher run used operation
-`b3ff8990-6e0c-4363-9b4e-e0a11b2f0057`. It emitted 23 valid JSONL events,
+`3643e3b1-c7e4-4d3d-b916-eca6b4a16e9c`. It emitted 24 valid JSONL events,
 exactly one terminal `operation_completed`, no absolute path or third-party
 output/tail in JSONL, and exited through the supervisor with OS exit code 0.
 

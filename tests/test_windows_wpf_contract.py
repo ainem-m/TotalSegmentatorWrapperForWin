@@ -86,6 +86,7 @@ class WindowsWpfContractTests(unittest.TestCase):
             path.read_text(encoding="utf-8")
             for path in sorted(SHELL.glob("MainWindow*.cs"))
         )
+        app = (SHELL / "App.xaml.cs").read_text(encoding="utf-8")
 
         self.assertIn('"audit"', intake)
         self.assertIn('"convert-clean"', intake)
@@ -154,6 +155,16 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertIn("convert_clean_metadata.json", intake)
         self.assertIn('"mpr_preview"', intake)
         self.assertIn("DicomMprPreview", intake)
+        self.assertIn("VerifySelectedNifti", intake)
+        self.assertIn(
+            "MetadataNiftiSelectionContractSelfTest",
+            intake,
+        )
+        self.assertIn(
+            "metadata_nifti_selection",
+            app,
+        )
+        self.assertNotIn("niftiFiles.Length != 1", intake)
         self.assertIn('"product_boundary"', intake)
         self.assertIn('"segmentation_started"', intake)
         self.assertIn('"secondary_capture_rescue"', intake)
