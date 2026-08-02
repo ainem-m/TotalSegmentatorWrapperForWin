@@ -215,8 +215,11 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertIn('startInfo.Environment["PYTHONUTF8"] = "1"', model_setup)
         self.assertIn("Kill(entireProcessTree: true)", model_setup)
         self.assertIn("CanPrepareTotalSegmentatorModel", configuration)
+        self.assertIn("TotalSegmentatorModelUpdateAvailable", configuration)
+        self.assertIn("ModelUpdateContractSelfTest", configuration)
         self.assertIn("TotalSegmentatorModelManifestPath", configuration)
         self.assertIn("モデルを取得して準備", code)
+        self.assertIn("モデルを更新", code)
         self.assertNotIn('mode = "auto"', model_setup)
         self.assertNotIn('mode = "cpu"', model_setup)
 

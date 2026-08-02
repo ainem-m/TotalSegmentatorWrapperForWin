@@ -77,6 +77,8 @@ remote verification succeed.
 | retry sends exact HTTP Range offset | PASS |
 | resumed progress is structured | PASS |
 | complete partial revalidated without download | PASS |
+| installed marker vs bundled manifest update detection | PASS |
+| failed model update preserves the verified installed model | PASS |
 | SHA-256 mismatch blocks promotion | PASS |
 | path traversal blocks promotion | PASS |
 | PowerShell UTF-8 BOM manifest | PASS |
@@ -85,7 +87,7 @@ remote verification succeed.
 | WPF model progress/result JSON contract | PASS |
 | WPF Release build | PASS, 0 warnings / 0 errors |
 | ProcessSupervisor Release build | PASS, 0 warnings / 0 errors |
-| Python suite | PASS, 225 tests / 3 skipped |
+| Python suite | PASS, 226 tests / 3 skipped |
 | `git diff --check` | PASS |
 | candidate portable self-test | PASS |
 | candidate Job Object self-test | PASS |
@@ -101,6 +103,12 @@ remote verification succeed.
 - WPF end-to-end download from that server
 - on-demand model followed by real Sample 1 inference from the user model area
 - clean-machine and Windows 11
-- update, rollback, installer, signing, and Store distribution
+- application/runtime self-update, installer, signing, and Store distribution
+
+The WPF shell now offers a manual `モデルを更新` action when its pinned bundled
+manifest differs from the verified installed model marker. Downloads retain the
+existing resumable, exact SHA-256, staging, and atomic-promotion behavior. This
+does not fetch a mutable "latest" manifest and does not update the WPF or
+app-private runtime itself.
 
 The complete offline 0.1.0.2 ZIP remains the tester-ready alpha package.

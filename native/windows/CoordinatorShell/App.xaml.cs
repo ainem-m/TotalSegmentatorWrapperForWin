@@ -103,12 +103,15 @@ public partial class App : Application
                         .MetadataNiftiSelectionContractSelfTest();
                 var modelSetupProtocol =
                     ModelSetupSession.ContractSelfTest();
+                var modelUpdateDetection =
+                    ShellConfiguration.ModelUpdateContractSelfTest();
                 var passed =
                     ui.Passed
                     && parserPassed
                     && archiveGuard
                     && metadataNiftiSelection
-                    && modelSetupProtocol;
+                    && modelSetupProtocol
+                    && modelUpdateDetection;
                 var payload = new
                 {
                     schema =
@@ -128,6 +131,7 @@ public partial class App : Application
                     metadata_nifti_selection =
                         metadataNiftiSelection,
                     model_setup_protocol = modelSetupProtocol,
+                    model_update_detection = modelUpdateDetection,
                     external_ui_automation = "unverified",
                 };
                 if (options.ContractEvidencePath is not null)

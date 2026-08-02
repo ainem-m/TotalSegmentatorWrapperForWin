@@ -66,9 +66,18 @@ public partial class MainWindow : Window
         SetScreen(ShellScreen.Setup, "待機中");
         if (_configuration.CanPrepareTotalSegmentatorModel)
         {
-            PrepareButton.Content = "モデルを取得して準備";
-            RuntimeMessage.Text =
-                "初回実行に必要なモデルをダウンロードします。中断後は続きから再開できます。";
+            if (_configuration.TotalSegmentatorModelUpdateAvailable)
+            {
+                PrepareButton.Content = "モデルを更新";
+                RuntimeMessage.Text =
+                    "新しいモデルを取得できます。検証が完了するまで現在のモデルを維持します。中断後は続きから再開できます。";
+            }
+            else
+            {
+                PrepareButton.Content = "モデルを取得して準備";
+                RuntimeMessage.Text =
+                    "初回実行に必要なモデルをダウンロードします。中断後は続きから再開できます。";
+            }
         }
         if (previewScenario is not null)
         {

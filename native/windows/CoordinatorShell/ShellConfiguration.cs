@@ -156,9 +156,101 @@ internal sealed record ShellConfiguration(
     }
 
     internal bool CanPrepareTotalSegmentatorModel =>
-        !TotalSegmentatorModelReady
+        (!TotalSegmentatorModelReady
+            || TotalSegmentatorModelUpdateAvailable)
         && File.Exists(CoordinatorPath)
         && File.Exists(TotalSegmentatorModelManifestPath);
+
+    internal bool TotalSegmentatorModelUpdateAvailable =>
+        TotalSegmentatorModelReady
+        && ModelManifestDiffersFromReadyMarker(
+            TotalSegmentatorModelManifestPath,
+            Path.Combine(
+                TotalSegmentatorHome,
+                ".totalseg_model_ready.json"));
+
+    private static bool ModelManifestDiffersFromReadyMarker(
+        string manifestPath,
+        string markerPath)
+    {
+        try
+        {
+            using var manifest = JsonDocument.Parse(
+                File.ReadAllText(manifestPath));
+            using var marker = JsonDocument.Parse(
+                File.ReadAllText(markerPath));
+            var manifestRoot = manifest.RootElement;
+            var markerRoot = marker.RootElement;
+            if (StringValue(manifestRoot, "schema") !=
+                    "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1"
+                || StringValue(markerRoot, "schema") !=
+                    "totalsegmentator_wrapper.windows_totalseg_model_ready.v1"
+                || !manifestRoot.TryGetProperty(
+                    "fallback_allowed",
+                    out var fallbackAllowed)
+                || fallbackAllowed.ValueKind != JsonValueKind.False)
+            {
+                return false;
+            }
+            return new[] { "bundle_id", "version", "sha256" }
+                .Any(key =>
+                    StringValue(manifestRoot, key) is { Length: > 0 } desired
+                    && desired != StringValue(markerRoot, key));
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string? StringValue(JsonElement value, string name) =>
+        value.TryGetProperty(name, out var property)
+            && property.ValueKind == JsonValueKind.String
+                ? property.GetString()
+                : null;
+
+    internal static bool ModelUpdateContractSelfTest()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"tswm-model-update-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var manifestPath = Path.Combine(root, "manifest.json");
+            var markerPath = Path.Combine(root, "marker.json");
+            File.WriteAllText(
+                manifestPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_bundle.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"2\","
+                + "\"sha256\":\"new\",\"fallback_allowed\":false}");
+            File.WriteAllText(
+                markerPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_ready.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"1\","
+                + "\"sha256\":\"old\"}");
+            var updateAvailable = ModelManifestDiffersFromReadyMarker(
+                manifestPath,
+                markerPath);
+            File.WriteAllText(
+                markerPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_ready.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"2\","
+                + "\"sha256\":\"new\"}");
+            var matchingMarkerDoesNotOfferUpdate =
+                !ModelManifestDiffersFromReadyMarker(
+                    manifestPath,
+                    markerPath);
+            return updateAvailable && matchingMarkerDoesNotOfferUpdate;
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 
     internal RuntimeCheckResult CheckRuntime()
     {

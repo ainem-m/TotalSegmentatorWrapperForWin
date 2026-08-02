@@ -117,6 +117,59 @@ class TotalSegModelSetupTests(unittest.TestCase):
             self.assertEqual(caught.exception.error_code, "model_hash_mismatch")
             self.assertFalse((root / "models").exists())
 
+    def test_failed_update_keeps_the_verified_installed_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            archive = root / "source.zip"
+            _write_bundle(archive)
+            payload = archive.read_bytes()
+            installed_manifest = _manifest(payload)
+            model_root = root / "state" / "totalseg-home"
+            with patch(
+                "urllib.request.urlopen",
+                return_value=_Response(
+                    payload,
+                    status=200,
+                    headers={"Content-Length": str(len(payload))},
+                ),
+            ):
+                install_model_bundle(
+                    manifest=installed_manifest,
+                    model_root=model_root,
+                )
+
+            original_marker = (
+                model_root / ".totalseg_model_ready.json"
+            ).read_bytes()
+            update_manifest = dict(installed_manifest)
+            update_manifest["version"] = "2.0.0"
+            update_manifest["sha256"] = "0" * 64
+            with patch(
+                "urllib.request.urlopen",
+                return_value=_Response(
+                    payload,
+                    status=200,
+                    headers={"Content-Length": str(len(payload))},
+                ),
+            ):
+                with self.assertRaises(ModelSetupError):
+                    install_model_bundle(
+                        manifest=update_manifest,
+                        model_root=model_root,
+                    )
+
+            self.assertEqual(
+                (model_root / ".totalseg_model_ready.json").read_bytes(),
+                original_marker,
+            )
+            self.assertEqual(
+                model_status(
+                    manifest=installed_manifest,
+                    model_root=model_root,
+                )["status"],
+                "ready",
+            )
+
     def test_path_traversal_is_rejected_before_promotion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
