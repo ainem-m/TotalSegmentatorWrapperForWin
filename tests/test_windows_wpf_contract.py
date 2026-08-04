@@ -57,6 +57,8 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertNotIn('mode = "cpu"', session)
         self.assertIn('"TSWM_DENTALSEG_MODEL_ROOT"', session)
         self.assertIn('"TSWM_TOOTHSEG_MODEL_ROOT"', session)
+        self.assertIn('"TEMP"', session)
+        self.assertIn('"TMP"', session)
         self.assertIn('await process.StandardInput.WriteLineAsync("cancel")', session)
         self.assertIn(
             'terminal.EventName == "operation_cancelled"',
@@ -211,6 +213,10 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertIn("TOTALSEG_MODEL_PREP_PROGRESS", model_setup)
         self.assertIn("ContractSelfTest", model_setup)
         self.assertIn("fallback_allowed", model_setup)
+        self.assertIn('"--legal-root"', model_setup)
+        self.assertIn('"third_party"', model_setup)
+        self.assertIn('"--pytorch-runtime-manifest"', model_setup)
+        self.assertIn("UserPythonPackagesRoot", model_setup)
         self.assertIn("StandardOutputEncoding = new UTF8Encoding(false)", model_setup)
         self.assertIn('startInfo.Environment["PYTHONUTF8"] = "1"', model_setup)
         self.assertIn("Kill(entireProcessTree: true)", model_setup)
@@ -218,6 +224,12 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertIn("TotalSegmentatorModelUpdateAvailable", configuration)
         self.assertIn("ModelUpdateContractSelfTest", configuration)
         self.assertIn("TotalSegmentatorModelManifestPath", configuration)
+        self.assertIn(
+            "totalsegmentator_wrapper.windows_totalseg_official_assets.v1",
+            configuration,
+        )
+        self.assertIn("PyTorchRuntimeReady", configuration)
+        self.assertIn("pytorch-runtime-bundle.json", configuration)
         self.assertIn("モデルを取得して準備", code)
         self.assertIn("モデルを更新", code)
         self.assertNotIn('mode = "auto"', model_setup)
@@ -451,6 +463,10 @@ class WindowsWpfContractTests(unittest.TestCase):
         self.assertIn("dynamic_labels = ui.DynamicLabels", app)
         self.assertIn("button_count = ui.ButtonCount", app)
         self.assertIn('"--evidence-run-dicom-rescue"', app)
+        self.assertIn('"--evidence-run-dicom-model"', app)
+        self.assertIn('"totalseg" => SegmentationProfile.TotalSegmentator', app)
+        self.assertIn('"dentalseg" => SegmentationProfile.DentalSegmentator', app)
+        self.assertIn('"toothseg" => SegmentationProfile.ToothSeg', app)
 
     def test_evidence_runners_are_isolated_and_model_runs_are_shared(
         self,
@@ -489,6 +505,30 @@ class WindowsWpfContractTests(unittest.TestCase):
         ):
             with self.subTest(fixed_value=fixed_value):
                 self.assertIn(fixed_value, evidence)
+        self.assertIn("run_manifest_verified", evidence)
+        self.assertIn("offline_preview_exists", evidence)
+
+    def test_dicom_model_e2e_runner_uses_the_shell_evidence_contract(
+        self,
+    ) -> None:
+        runner = (
+            ROOT / "scripts" / "run_windows_dicom_models_e2e.ps1"
+        ).read_text(encoding="utf-8")
+
+        for value in (
+            "--evidence-run-dicom-model",
+            '"totalseg"',
+            '"dentalseg"',
+            '"toothseg"',
+            '"cuda_required"',
+            '"cuda:0"',
+            "mpr_preview_verified",
+            "run_manifest_verified",
+            "artifact_manifest_exists",
+            "offline_preview_exists",
+        ):
+            with self.subTest(value=value):
+                self.assertIn(value, runner)
 
     def test_pruned_internal_results_keep_only_consumed_state(self) -> None:
         intake = (SHELL / "DicomIntakeSession.cs").read_text(

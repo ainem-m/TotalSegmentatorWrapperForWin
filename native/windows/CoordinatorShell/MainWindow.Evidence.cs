@@ -569,8 +569,32 @@ public partial class MainWindow
 
     internal async Task<bool> RunEvidenceDicomAsync(
         string dicomFolder,
-        string evidencePath)
+        string evidencePath,
+        SegmentationProfile profile)
     {
+        var runtime = _configuration.CheckRuntime();
+        SetSelectedSegmentationProfile(profile);
+        var modelReadiness = CheckSelectedModelRuntime();
+        var schema = profile == SegmentationProfile.TotalSegmentator
+            ? "totalsegmentator_wrapper.windows_wpf_dicom_run.v1"
+            : "totalsegmentator_wrapper.windows_wpf_dicom_model_run.v1";
+        if (!runtime.Passed || !modelReadiness.Passed)
+        {
+            await WriteEvidenceAsync(
+                evidencePath,
+                new
+                {
+                    schema,
+                    status = "fail",
+                    source_kind = "dicom",
+                    operation = profile.OperationName(),
+                    error_code = modelReadiness.ErrorCode
+                        ?? runtime.ErrorCode
+                        ?? "runtime_unavailable",
+                    segmentation_started = false,
+                });
+            return false;
+        }
         _safeEventLog.Clear();
         var converted = await AuditAndConvertDicomAsync(
             dicomFolder);
@@ -590,6 +614,7 @@ public partial class MainWindow
             && CommitDicomConversion();
         if (previewConfirmed)
         {
+            SetSelectedSegmentationProfile(profile);
             await StartRunAsync();
         }
         var result = _lastResult;
@@ -600,6 +625,52 @@ public partial class MainWindow
             conversion?.NiftiPath is { } niftiPath
             && File.Exists(niftiPath)
             && new FileInfo(niftiPath).Length > 0;
+        var artifactManifestExists =
+            result?.FinalDirectory is { Length: > 0 } finalDirectory
+            && File.Exists(
+                Path.Combine(finalDirectory, "artifact-manifest.json"));
+        var outputPreviewExists =
+            result?.FinalDirectory is { Length: > 0 } previewDirectory
+            && File.Exists(
+                Path.Combine(
+                    previewDirectory,
+                    "surface_preview",
+                    "index.html"));
+        var (expectedBackend, expectedTask) = profile switch
+        {
+            SegmentationProfile.TotalSegmentator =>
+                ("totalsegmentator", "craniofacial_structures"),
+            SegmentationProfile.DentalSegmentator =>
+                ("dentalsegmentator", "craniofacial_structures"),
+            SegmentationProfile.ToothSeg => ("toothseg", "teeth"),
+            _ => throw new ArgumentOutOfRangeException(nameof(profile)),
+        };
+        var runManifestVerified = false;
+        if (result?.FinalDirectory is { Length: > 0 } runDirectory)
+        {
+            var runManifestPath = Path.Combine(
+                runDirectory,
+                "run-manifest.json");
+            if (File.Exists(runManifestPath))
+            {
+                using var runManifest = JsonDocument.Parse(
+                    File.ReadAllText(runManifestPath));
+                var root = runManifest.RootElement;
+                runManifestVerified =
+                    root.GetProperty("backend").GetString()
+                        == expectedBackend
+                    && root.GetProperty("task").GetString()
+                        == expectedTask
+                    && root.GetProperty("requested_policy").GetString()
+                        == "cuda_required"
+                    && root.GetProperty("requested_device_index").GetInt32()
+                        == 0
+                    && root.GetProperty("resolved_device").GetString()
+                        == "cuda:0"
+                    && !root.GetProperty("fallback_allowed").GetBoolean()
+                    && !root.GetProperty("fallback_occurred").GetBoolean();
+            }
+        }
         var passed =
             converted
             && previewVerified
@@ -609,15 +680,20 @@ public partial class MainWindow
             && niftiExists
             && result?.TerminalEvent == "operation_completed"
             && result.SupervisorExitCode == 0
-            && HasStrictCudaZeroWithoutFallback(result);
+            && HasStrictCudaZeroWithoutFallback(result)
+            && artifactManifestExists
+            && outputPreviewExists
+            && runManifestVerified;
         await WriteEvidenceAsync(
             evidencePath,
             new
             {
-                schema =
-                    "totalsegmentator_wrapper.windows_wpf_dicom_run.v1",
+                schema,
                 status = passed ? "pass" : "fail",
                 source_kind = "dicom",
+                operation = profile.OperationName(),
+                backend = expectedBackend,
+                task = expectedTask,
                 dicom_operation_id =
                     audit?.OperationId
                     ?? _lastDicomFailure?.OperationId,
@@ -657,6 +733,9 @@ public partial class MainWindow
                     result?.FallbackAllowed,
                 fallback_occurred =
                     result?.FallbackOccurred,
+                run_manifest_verified = runManifestVerified,
+                artifact_manifest_exists = artifactManifestExists,
+                offline_preview_exists = outputPreviewExists,
                 intake_error_code =
                     _lastDicomFailure?.ErrorCode,
                 intake_failure_stage =

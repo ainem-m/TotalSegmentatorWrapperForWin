@@ -15,12 +15,42 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         self.assertIn("<clear />", script)
         self.assertIn("DotNetPackageSource", script)
         self.assertIn("10.0.10.nupkg", script)
+        self.assertIn("Get-ValidatedDicomNormalizer", script)
+        self.assertIn("three_plane_mpr_preview", script)
         self.assertIn("--no-index", script)
         self.assertIn("--no-deps", script)
         self.assertIn("Dataset115_mandible", script)
         self.assertIn(
             "Dataset297_TotalSegmentator_total_3mm_1559subj",
             script,
+        )
+        self.assertIn(
+            "totalsegmentator_wrapper.windows_totalseg_official_assets.v1",
+            script,
+        )
+        self.assertIn("github\\.com/wasserth/TotalSegmentator", script)
+        self.assertIn(
+            "totalsegmentator_wrapper.windows_pytorch_runtime_bundle.v1",
+            script,
+        )
+        self.assertIn("download\\.pytorch\\.org/whl/cu126", script)
+        self.assertIn("pytorch-runtime-bundle.json", script)
+        self.assertIn('Join-Path $pythonSitePackages "torch"', script)
+        self.assertTrue(
+            (
+                ROOT
+                / "resources"
+                / "model_bundles"
+                / "totalseg-official-assets-v1.json"
+            ).is_file()
+        )
+        self.assertTrue(
+            (
+                ROOT
+                / "resources"
+                / "runtime_bundles"
+                / "pytorch-cu126-cp312-win-x64-v1.json"
+            ).is_file()
         )
         self.assertIn("Compression.ZipFile", script)
         self.assertIn('$portableDirectoryName = "TSW"', script)
@@ -62,6 +92,13 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
             / "CoordinatorShell"
             / "ShellConfiguration.cs"
         ).read_text(encoding="utf-8")
+        app = (
+            ROOT
+            / "native"
+            / "windows"
+            / "CoordinatorShell"
+            / "App.xaml.cs"
+        ).read_text(encoding="utf-8")
         self.assertIn("--portable-self-test", build)
         self.assertIn("write_portable_runtime_diagnostic.py", build)
         self.assertIn("PYTHONDONTWRITEBYTECODE", session)
@@ -76,10 +113,12 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
             configuration,
         )
         self.assertIn("SpecialFolder.LocalApplicationData", configuration)
+        self.assertIn("if (engineeringConfigPath is null)", configuration)
         self.assertIn(
             '"runtime", "native"',
             configuration,
         )
+        self.assertIn("output_root_is_user_writable", app)
         self.assertIn(
             'distribution_directory_writable = $false',
             build,
@@ -136,7 +175,12 @@ class WindowsAlphaPortableContractTests(unittest.TestCase):
         self.assertIn("展開した配布フォルダーへは保存しません", manual)
 
     def test_msix_implementation_remains_available(self) -> None:
-        self.assertTrue((ROOT / "scripts" / "build_alpha_msix.ps1").is_file())
+        msix = ROOT / "scripts" / "build_alpha_msix.ps1"
+        self.assertTrue(msix.is_file())
+        self.assertIn(
+            "Get-ValidatedDicomNormalizer",
+            msix.read_text(encoding="utf-8"),
+        )
         self.assertTrue((ROOT / "scripts" / "install_alpha_msix.ps1").is_file())
         self.assertTrue((ROOT / "docs" / "ALPHA_INSTALL_JA.md").is_file())
 

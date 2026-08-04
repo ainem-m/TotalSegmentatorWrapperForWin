@@ -32,7 +32,7 @@ internal sealed class ModelSetupSession : IDisposable
             StandardOutputEncoding = new UTF8Encoding(false),
             StandardErrorEncoding = new UTF8Encoding(false),
         };
-        foreach (var argument in new[]
+        var arguments = new List<string>
         {
             "-m",
             "totalsegmentator_wrapper_mac.totalseg_model_setup",
@@ -40,12 +40,28 @@ internal sealed class ModelSetupSession : IDisposable
             _configuration.TotalSegmentatorModelManifestPath,
             "--model-root",
             _configuration.TotalSegmentatorHome,
-        })
+            "--legal-root",
+            Path.Combine(
+                AppContext.BaseDirectory,
+                "legal",
+                "third_party"),
+        };
+        if (!_configuration.PyTorchRuntimeReady
+            && File.Exists(_configuration.PyTorchRuntimeManifestPath))
+        {
+            arguments.Add("--pytorch-runtime-manifest");
+            arguments.Add(_configuration.PyTorchRuntimeManifestPath);
+            arguments.Add("--pytorch-runtime-root");
+            arguments.Add(_configuration.UserPythonPackagesRoot);
+        }
+        foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
         startInfo.Environment["PYTHONUTF8"] = "1";
         startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
+        startInfo.Environment["PYTHONPATH"] =
+            _configuration.UserPythonPackagesRoot;
         try
         {
             _process = Process.Start(startInfo)

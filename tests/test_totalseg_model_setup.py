@@ -13,8 +13,11 @@ from unittest.mock import patch
 from totalsegmentator_wrapper_mac.totalseg_model_setup import (
     ModelSetupError,
     install_model_bundle,
+    install_pytorch_runtime,
     load_model_manifest,
+    load_pytorch_runtime_manifest,
     model_status,
+    pytorch_runtime_status,
 )
 
 
@@ -183,6 +186,125 @@ class TotalSegModelSetupTests(unittest.TestCase):
                     install_model_bundle(manifest=manifest, model_root=root / "models")
             self.assertFalse((root / "models").exists())
 
+    def test_official_release_assets_are_verified_and_promoted_atomically(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mandible_archive = root / "mandible.zip"
+            total_archive = root / "total.zip"
+            _write_official_asset(
+                mandible_archive,
+                "Dataset115_mandible",
+            )
+            _write_official_asset(
+                total_archive,
+                "Dataset297_TotalSegmentator_total_3mm_1559subj",
+            )
+            manifest = _official_manifest(
+                mandible_archive.read_bytes(),
+                total_archive.read_bytes(),
+            )
+            legal_root = root / "legal-source"
+            legal_root.mkdir()
+            license_root = legal_root / "licenses"
+            license_root.mkdir()
+            for filename in LEGAL_FILES:
+                destination = (
+                    license_root / filename
+                    if filename.endswith(".txt")
+                    else legal_root / filename
+                )
+                destination.write_bytes(b"notice")
+            model_root = root / "state" / "totalseg-home"
+            responses = [
+                _Response(
+                    mandible_archive.read_bytes(),
+                    status=200,
+                    headers={"Content-Length": str(mandible_archive.stat().st_size)},
+                ),
+                _Response(
+                    total_archive.read_bytes(),
+                    status=200,
+                    headers={"Content-Length": str(total_archive.stat().st_size)},
+                ),
+            ]
+            with patch("urllib.request.urlopen", side_effect=responses):
+                result = install_model_bundle(
+                    manifest=manifest,
+                    model_root=model_root,
+                    legal_root=legal_root,
+                )
+
+            self.assertEqual(result["status"], "success")
+            self.assertTrue(result["sha256_verified"])
+            self.assertFalse(result["fallback_allowed"])
+            self.assertEqual(
+                model_status(manifest=manifest, model_root=model_root)["status"],
+                "ready",
+            )
+            for dataset in DATASETS:
+                self.assertTrue(
+                    any(
+                        (model_root / "nnunet" / "results" / dataset).rglob(
+                            "checkpoint_final.pth"
+                        )
+                    )
+                )
+
+    def test_pytorch_cuda_runtime_is_verified_and_promoted_atomically(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wheel_payload = b"verified-pytorch-wheel"
+            manifest_path = root / "pytorch-runtime.json"
+            manifest_path.write_text(
+                json.dumps(_pytorch_runtime_manifest(wheel_payload)),
+                encoding="utf-8",
+            )
+            manifest = load_pytorch_runtime_manifest(manifest_path)
+            runtime_root = root / "state" / "python-site-packages"
+
+            def install_fake_wheel(_archive: Path, staging: Path) -> None:
+                torch_root = staging / "torch"
+                torch_root.mkdir(parents=True)
+                (torch_root / "__init__.py").write_text(
+                    "__version__ = '2.11.0+cu126'\n"
+                    "class _Version:\n"
+                    "    cuda = '12.6'\n"
+                    "version = _Version()\n",
+                    encoding="utf-8",
+                )
+
+            response = _Response(
+                wheel_payload,
+                status=200,
+                headers={"Content-Length": str(len(wheel_payload))},
+            )
+            with patch("urllib.request.urlopen", return_value=response), patch(
+                "totalsegmentator_wrapper_mac.totalseg_model_setup"
+                "._install_pytorch_wheel",
+                side_effect=install_fake_wheel,
+            ):
+                result = install_pytorch_runtime(
+                    manifest=manifest,
+                    runtime_root=runtime_root,
+                )
+
+            self.assertEqual(result["status"], "success")
+            self.assertTrue(result["downloaded"])
+            self.assertEqual(
+                pytorch_runtime_status(
+                    manifest=manifest,
+                    runtime_root=runtime_root,
+                )["status"],
+                "ready",
+            )
+            self.assertTrue(
+                (runtime_root / ".pytorch_runtime_ready.json").is_file()
+            )
+
 
 def _manifest(payload: bytes) -> dict[str, object]:
     return {
@@ -208,6 +330,83 @@ def _write_bundle(path: Path, *, unsafe: bool = False) -> None:
             archive.writestr(f"totalseg-home/legal/{filename}", b"notice")
         if unsafe:
             archive.writestr("totalseg-home/../../escaped.txt", "no")
+
+
+def _official_manifest(
+    mandible_payload: bytes,
+    total_payload: bytes,
+) -> dict[str, object]:
+    assets = [
+        _official_asset(
+            "Dataset115_mandible",
+            mandible_payload,
+            "v2.5.0-weights",
+        ),
+        _official_asset(
+            "Dataset297_TotalSegmentator_total_3mm_1559subj",
+            total_payload,
+            "v2.0.0-weights",
+        ),
+    ]
+    return {
+        "schema": "totalsegmentator_wrapper.windows_totalseg_official_assets.v1",
+        "bundle_id": "craniofacial",
+        "version": "official-test",
+        "sha256": hashlib.sha256(
+            "".join(asset["sha256"] for asset in assets).encode("ascii")
+        ).hexdigest(),
+        "size_bytes": sum(asset["size_bytes"] for asset in assets),
+        "datasets": DATASETS,
+        "legal_files": LEGAL_FILES,
+        "fallback_allowed": False,
+        "assets": assets,
+    }
+
+
+def _official_asset(
+    dataset: str,
+    payload: bytes,
+    release: str,
+) -> dict[str, object]:
+    return {
+        "dataset": dataset,
+        "url": (
+            "https://github.com/wasserth/TotalSegmentator/releases/download/"
+            f"{release}/{dataset}.zip"
+        ),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "size_bytes": len(payload),
+        "archive_root": dataset,
+    }
+
+
+def _pytorch_runtime_manifest(payload: bytes) -> dict[str, object]:
+    return {
+        "schema": "totalsegmentator_wrapper.windows_pytorch_runtime_bundle.v1",
+        "bundle_id": "pytorch-cuda",
+        "version": "2.11.0+cu126-cp312-win-x64",
+        "package": "torch",
+        "python_version": "3.12",
+        "torch_version": "2.11.0+cu126",
+        "cuda_version": "12.6",
+        "wheel_filename": "torch-2.11.0+cu126-cp312-cp312-win_amd64.whl",
+        "url": (
+            "https://download.pytorch.org/whl/cu126/"
+            "torch-2.11.0%2Bcu126-cp312-cp312-win_amd64.whl"
+        ),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "size_bytes": len(payload),
+        "fallback_allowed": False,
+    }
+
+
+def _write_official_asset(path: Path, dataset: str) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(f"{dataset}/dataset.json", "{}")
+        archive.writestr(
+            f"{dataset}/trainer/fold_0/checkpoint_final.pth",
+            b"weights",
+        )
 
 
 if __name__ == "__main__":

@@ -335,6 +335,10 @@ internal sealed class CoordinatorSession : IDisposable
             "TotalSegmentatorWrapperWindows",
             "totalseg-state");
         Directory.CreateDirectory(totalSegmentatorStateDirectory);
+        var runtimeTemporaryDirectory = Path.Combine(
+            _configuration.OutputRoot,
+            ".runtime-tmp");
+        Directory.CreateDirectory(runtimeTemporaryDirectory);
         var userConfigPath = Path.Combine(
             totalSegmentatorStateDirectory,
             "config.json");
@@ -406,12 +410,16 @@ internal sealed class CoordinatorSession : IDisposable
             _configuration.TotalSegmentatorHome,
             "nnunet",
             "results");
+        startInfo.Environment["TEMP"] = runtimeTemporaryDirectory;
+        startInfo.Environment["TMP"] = runtimeTemporaryDirectory;
         startInfo.Environment["TSWM_DENTALSEG_MODEL_ROOT"] =
             _configuration.DentalSegmentatorModelRoot;
         startInfo.Environment["TSWM_TOOTHSEG_MODEL_ROOT"] =
             _configuration.ToothSegModelRoot;
         startInfo.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         startInfo.Environment["PYTHONNOUSERSITE"] = "1";
+        startInfo.Environment["PYTHONPATH"] =
+            _configuration.UserPythonPackagesRoot;
         startInfo.Environment["PYTHONUTF8"] = "1";
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException(

@@ -64,6 +64,44 @@ function Copy-Tree([string]$Source, [string]$Destination) {
     }
 }
 
+function Get-ValidatedDicomNormalizer([string]$Path) {
+    $doctorOutput = & $Path doctor
+    if ($LASTEXITCODE -ne 0) {
+        throw "DICOM normalizer doctor failed with exit code $LASTEXITCODE."
+    }
+    try {
+        $doctor = ($doctorOutput | Out-String | ConvertFrom-Json)
+    }
+    catch {
+        throw "DICOM normalizer doctor did not produce valid JSON."
+    }
+    $mprCapability = if ($null -eq $doctor.capabilities) {
+        $null
+    }
+    else {
+        $doctor.capabilities.PSObject.Properties[
+            "three_plane_mpr_preview"
+        ]
+    }
+    if (
+        $doctor.schema -ne
+            "totalsegmentator_wrapper_mac.dicom_normalizer.doctor.v1" -or
+        $doctor.status -ne "ok" -or
+        $null -eq $mprCapability -or
+        $mprCapability.Value -ne $true
+    ) {
+        throw (
+            "DICOM normalizer must report the three_plane_mpr_preview " +
+            "capability. Rebuild it from this repository before packaging."
+        )
+    }
+    [pscustomobject]@{
+        version = [string]$doctor.tool.version
+        sha256 = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+        three_plane_mpr_preview = $true
+    }
+}
+
 $dotnet = Resolve-RequiredFile $DotNetPath ".NET SDK"
 $dotnetPackages = Resolve-RequiredDirectory `
     $DotNetPackageSource `
@@ -75,32 +113,99 @@ $totalSegHome = Resolve-RequiredDirectory `
 $dicomNormalizer = Resolve-RequiredFile `
     $DicomNormalizerPath `
     "DICOM normalizer"
+$dicomNormalizerEvidence = Get-ValidatedDicomNormalizer $dicomNormalizer
 $dcm2niix = Resolve-RequiredFile $Dcm2niixPath "dcm2niix"
 $modelBundleManifest = $null
 $modelBundle = $null
+$pytorchRuntimeManifest = Resolve-RequiredFile `
+    (Join-Path `
+        $repoRoot `
+        "resources\runtime_bundles\pytorch-cu126-cp312-win-x64-v1.json") `
+    "PyTorch CUDA runtime manifest"
+$pytorchRuntimeBundle = Get-Content `
+    -LiteralPath $pytorchRuntimeManifest `
+    -Raw |
+    ConvertFrom-Json
+if (
+    $pytorchRuntimeBundle.schema -ne
+        "totalsegmentator_wrapper.windows_pytorch_runtime_bundle.v1" -or
+    $pytorchRuntimeBundle.bundle_id -ne "pytorch-cuda" -or
+    $pytorchRuntimeBundle.version -ne "2.11.0+cu126-cp312-win-x64" -or
+    $pytorchRuntimeBundle.package -ne "torch" -or
+    $pytorchRuntimeBundle.python_version -ne "3.12" -or
+    $pytorchRuntimeBundle.torch_version -ne "2.11.0+cu126" -or
+    $pytorchRuntimeBundle.cuda_version -ne "12.6" -or
+    $pytorchRuntimeBundle.wheel_filename -ne (
+        "torch-2.11.0+cu126-cp312-cp312-win_amd64.whl"
+    ) -or
+    $pytorchRuntimeBundle.url -notmatch (
+        "^https://download\.pytorch\.org/whl/cu126/"
+    ) -or
+    $pytorchRuntimeBundle.sha256 -notmatch "^[0-9a-f]{64}$" -or
+    $pytorchRuntimeBundle.size_bytes -le 0 -or
+    $pytorchRuntimeBundle.fallback_allowed -ne $false
+) {
+    throw "The PyTorch CUDA runtime manifest is invalid."
+}
 if ($ModelDelivery -eq "OnDemand") {
     $modelBundleManifest = Resolve-RequiredFile `
         $ModelBundleManifestPath `
         "TotalSegmentator model bundle manifest"
     $modelBundle = Get-Content -LiteralPath $modelBundleManifest -Raw |
         ConvertFrom-Json
+    $expectedLegalFiles = (
+        "TotalSegmentator-Apache-2.0.txt," +
+        "TotalSegmentator-model-bundle-NOTICE.txt," +
+        "totalsegmentator_task_inventory.json"
+    )
+    $expectedDatasets = (
+        "Dataset115_mandible," +
+        "Dataset297_TotalSegmentator_total_3mm_1559subj"
+    )
+    $isLegacyBundle = $modelBundle.schema -eq
+        "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1"
+    $isOfficialAssetsBundle = $modelBundle.schema -eq
+        "totalsegmentator_wrapper.windows_totalseg_official_assets.v1"
+    $hasExpectedSharedContract = (
+        $modelBundle.sha256 -match "^[0-9a-f]{64}$" -and
+        $modelBundle.size_bytes -gt 0 -and
+        $modelBundle.fallback_allowed -eq $false -and
+        (@($modelBundle.legal_files) -join ",") -eq $expectedLegalFiles -and
+        (@($modelBundle.datasets) -join ",") -eq $expectedDatasets
+    )
+    $hasValidOfficialAssets = $false
+    if ($isOfficialAssetsBundle) {
+        $assets = @($modelBundle.assets)
+        $hasValidOfficialAssets = $assets.Count -eq 2
+        foreach ($index in 0..1) {
+            $asset = if ($index -lt $assets.Count) { $assets[$index] } else { $null }
+            $dataset = @(
+                "Dataset115_mandible",
+                "Dataset297_TotalSegmentator_total_3mm_1559subj"
+            )[$index]
+            if (
+                $null -eq $asset -or
+                $asset.dataset -ne $dataset -or
+                $asset.archive_root -ne $dataset -or
+                $asset.url -notmatch (
+                    "^https://github\.com/wasserth/TotalSegmentator/" +
+                    "releases/download/"
+                ) -or
+                $asset.sha256 -notmatch "^[0-9a-f]{64}$" -or
+                $asset.size_bytes -le 0
+            ) {
+                $hasValidOfficialAssets = $false
+            }
+        }
+    }
     if (
-        $modelBundle.schema -ne
-            "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1" -or
-        $modelBundle.url -notmatch "^https://" -or
-        $modelBundle.sha256 -notmatch "^[0-9a-f]{64}$" -or
-        $modelBundle.size_bytes -le 0 -or
-        $modelBundle.archive_root -ne "totalseg-home" -or
-        $modelBundle.fallback_allowed -ne $false -or
-        (@($modelBundle.legal_files) -join ",") -ne (
-            "TotalSegmentator-Apache-2.0.txt," +
-            "TotalSegmentator-model-bundle-NOTICE.txt," +
-            "totalsegmentator_task_inventory.json"
-        ) -or
-        (@($modelBundle.datasets) -join ",") -ne (
-            "Dataset115_mandible," +
-            "Dataset297_TotalSegmentator_total_3mm_1559subj"
-        )
+        -not $hasExpectedSharedContract -or
+        ($isLegacyBundle -and (
+            $modelBundle.url -notmatch "^https://" -or
+            $modelBundle.archive_root -ne "totalseg-home"
+        )) -or
+        ($isOfficialAssetsBundle -and -not $hasValidOfficialAssets) -or
+        (-not $isLegacyBundle -and -not $isOfficialAssetsBundle)
     ) {
         throw "The TotalSegmentator model bundle manifest is invalid."
     }
@@ -285,6 +390,9 @@ try {
         Copy-Item `
             -LiteralPath $modelBundleManifest `
             -Destination (Join-Path $modelsRoot "totalseg-model-bundle.json")
+        Copy-Item `
+            -LiteralPath $pytorchRuntimeManifest `
+            -Destination (Join-Path $modelsRoot "pytorch-runtime-bundle.json")
     }
     Copy-Tree `
         (Join-Path $repoRoot "resources\sample1") `
@@ -404,6 +512,13 @@ try {
         results_location = "user_selected_or_local_app_data"
         distribution_directory_writable = $false
         model_delivery = $ModelDelivery.ToLowerInvariant()
+        pytorch_runtime_delivery = if ($ModelDelivery -eq "OnDemand") {
+            "ondemand"
+        }
+        else {
+            "bundled"
+        }
+        dicom_normalizer = $dicomNormalizerEvidence
         bundled_totalsegmentator_datasets = @(
             if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
         )
@@ -488,6 +603,40 @@ try {
         throw "Portable runtime diagnostic evidence did not pass."
     }
 
+    if ($ModelDelivery -eq "OnDemand") {
+        $torchPackage = Join-Path $pythonSitePackages "torch"
+        $torchMetadata = @(
+            Get-ChildItem `
+                -LiteralPath $pythonSitePackages `
+                -Directory `
+                -Filter "torch-*.dist-info"
+        )
+        if (-not (Test-Path -LiteralPath $torchPackage) -or
+            $torchMetadata.Count -eq 0) {
+            throw "The staged PyTorch CUDA runtime is unavailable."
+        }
+        Remove-Item -LiteralPath $torchPackage -Recurse -Force
+        foreach ($metadata in $torchMetadata) {
+            Remove-Item -LiteralPath $metadata.FullName -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $torchPackage) {
+            throw "The staged PyTorch CUDA runtime was not removed."
+        }
+    }
+
+    $payloadFiles = @(Get-ChildItem $portableRoot -File -Recurse)
+    $longestInternalPath = (
+        $payloadFiles |
+        ForEach-Object {
+            "$portableDirectoryName\" +
+                $_.FullName.Substring($portableRoot.Length + 1)
+        } |
+        Sort-Object Length -Descending |
+        Select-Object -First 1
+    )
+    if ($longestInternalPath.Length -gt $maximumInternalPathCharacters) {
+        throw "The portable payload exceeds the Windows Explorer path budget."
+    }
     $payloadMeasure = $payloadFiles |
         Measure-Object Length -Sum
     $zipFileName = if ($ModelDelivery -eq "OnDemand") {
@@ -544,6 +693,7 @@ try {
         python_runtime_network_resolution = $false
         dotnet_runtime_package_network_resolution = $false
         dotnet_runtime_packages = @($dotNetPackageEvidence)
+        dicom_normalizer = $dicomNormalizerEvidence
         bundled_totalsegmentator_datasets = @(
             if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
         )
@@ -559,6 +709,24 @@ try {
         }
         else {
             $modelBundle.sha256
+        }
+        pytorch_runtime_delivery = if ($ModelDelivery -eq "OnDemand") {
+            "ondemand"
+        }
+        else {
+            "bundled"
+        }
+        pytorch_runtime_bundle_version = if ($ModelDelivery -eq "OnDemand") {
+            $pytorchRuntimeBundle.version
+        }
+        else {
+            $null
+        }
+        pytorch_runtime_bundle_sha256 = if ($ModelDelivery -eq "OnDemand") {
+            $pytorchRuntimeBundle.sha256
+        }
+        else {
+            $null
         }
         bundled_additional_models = @()
         portable_self_test = "pass"

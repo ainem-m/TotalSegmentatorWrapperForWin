@@ -38,7 +38,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr std::string_view kVersion = "0.3.0";
+constexpr std::string_view kVersion = "0.4.0";
 constexpr std::size_t kDicomdirReadLimitBytes = 64 * 1024 * 1024;
 constexpr std::size_t kPreviewReadLimitBytes = 512ULL * 1024ULL * 1024ULL;
 constexpr int kMinVolumeSlices = 32;
@@ -1925,6 +1925,7 @@ std::string doctor_json(const OptionalTools& tools) {
     out << "    \"prepare_rescue\": true,\n";
     out << "    \"export_rescue_stack\": true,\n";
     out << "    \"prepare_viewer_export\": true,\n";
+    out << "    \"three_plane_mpr_preview\": true,\n";
     out << "    \"native_compressed_pixel_decode\": true,\n";
     out << "    \"native_lossless_transcode\": true,\n";
     out << "    \"enhanced_ct_per_frame_geometry_validation\": false,\n";

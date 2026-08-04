@@ -35,20 +35,26 @@ Windows SmartScreenが表示される可能性がありますが、表示され�
 
 ## オンデマンドモデル版
 
-ファイル名に`ondemand`を含む軽量版は、WPF、app-private Python/CUDA、
+ファイル名に`ondemand`を含む軽量版は、WPF、app-private Python、
 TotalSegmentator、Job Object supervisor、DICOM binaries、Sample 1を同梱し、
-モデルcheckpointだけを初回利用時に取得します。Python依存をpublic indexから
-解決する方式ではありません。
+モデルcheckpointとPyTorch/CUDAだけを初回利用時に取得します。
 
-初回の「モデルを取得して準備」で、固定manifestに記録されたHTTPS取得元、
-exact version、ファイルサイズ、SHA-256を使用します。ダウンロードが中断した
+初回の「モデルを取得して準備」で、固定manifestに記録された公式HTTPS取得元、
+exact version、ファイルサイズ、SHA-256を使用します。PyTorch/CUDAは
+PyTorch公式配布元から取得し、モデルはTotalSegmentator公式配布元から取得します。
+ダウンロードが中断した
 場合は`.part`をユーザー領域に保持し、もう一度押すとHTTP Rangeで続きから
 再開します。サーバーが安全な再開に対応しない場合は同じpartialへ追記せず、
 先頭から取得し直します。
 
+現在のmanifestは、TotalSegmentator公式GitHub Releasesの
+`Dataset115_mandible`と
+`Dataset297_TotalSegmentator_total_3mm_1559subj`を個別に取得します。
+両方のSHA-256が一致した場合だけ準備完了になります。
+
 SHA-256、bundle内容、必須checkpoint、利用統計無効設定を検証し終わるまで、
 モデルは有効化されません。失敗時にCPUや別モデルへ切り替えることも
-ありません。モデルとpartialはLocalAppData配下に保存され、展開した配布
+ありません。モデル、PyTorch/CUDA、partialはLocalAppData配下に保存され、展開した配布
 フォルダーへは書き込みません。
 
 モデルbundleにはTotalSegmentatorのApache License 2.0本文、モデル配布NOTICE、

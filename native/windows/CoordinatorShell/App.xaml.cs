@@ -265,7 +265,9 @@ public partial class App : Application
             {
                 var passed = await mainWindow.RunEvidenceDicomAsync(
                     options.EvidenceDicomFolder,
-                    options.EvidenceDicomPath);
+                    options.EvidenceDicomPath,
+                    options.EvidenceDicomProfile
+                        ?? SegmentationProfile.TotalSegmentator);
                 var parent = Path.GetDirectoryName(
                     Path.GetFullPath(options.EvidenceDicomPath));
                 if (parent is not null)
@@ -353,6 +355,7 @@ public partial class App : Application
         string? EvidenceToothSegPath,
         string? EvidenceDicomFolder,
         string? EvidenceDicomPath,
+        SegmentationProfile? EvidenceDicomProfile,
         string? EvidenceDicomRescueFolder,
         string? EvidenceDicomRescuePath)
     {
@@ -370,6 +373,7 @@ public partial class App : Application
             string? evidenceToothSegPath = null;
             string? evidenceDicomFolder = null;
             string? evidenceDicomPath = null;
+            SegmentationProfile? evidenceDicomProfile = null;
             string? evidenceDicomRescueFolder = null;
             string? evidenceDicomRescuePath = null;
             var contractSelfTest = false;
@@ -496,6 +500,29 @@ public partial class App : Application
                                 "The ToothSeg evidence path must be absolute.");
                         }
                         break;
+                    case "--evidence-run-dicom-model":
+                        evidenceDicomProfile = ParseDicomEvidenceProfile(
+                            RequiredValue(
+                                args,
+                                ref index,
+                                "--evidence-run-dicom-model"));
+                        evidenceDicomFolder = RequiredValue(
+                            args,
+                            ref index,
+                            "--evidence-run-dicom-model");
+                        evidenceDicomPath = RequiredValue(
+                            args,
+                            ref index,
+                            "--evidence-run-dicom-model");
+                        if (!Path.IsPathFullyQualified(
+                                evidenceDicomFolder)
+                            || !Path.IsPathFullyQualified(
+                                evidenceDicomPath))
+                        {
+                            throw new ArgumentException(
+                                "The DICOM input and evidence paths must be absolute.");
+                        }
+                        break;
                     case "--evidence-run-dicom":
                         evidenceDicomFolder = RequiredValue(
                             args,
@@ -594,8 +621,22 @@ public partial class App : Application
                 evidenceToothSegPath,
                 evidenceDicomFolder,
                 evidenceDicomPath,
+                evidenceDicomProfile,
                 evidenceDicomRescueFolder,
                 evidenceDicomRescuePath);
+        }
+
+        private static SegmentationProfile ParseDicomEvidenceProfile(
+            string value)
+        {
+            return value switch
+            {
+                "totalseg" => SegmentationProfile.TotalSegmentator,
+                "dentalseg" => SegmentationProfile.DentalSegmentator,
+                "toothseg" => SegmentationProfile.ToothSeg,
+                _ => throw new ArgumentException(
+                    "The DICOM evidence model must be totalseg, dentalseg, or toothseg."),
+            };
         }
 
         private static string RequiredValue(

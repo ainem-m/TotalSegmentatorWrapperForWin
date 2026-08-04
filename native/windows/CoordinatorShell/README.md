@@ -34,9 +34,9 @@ that into the typed coordinator control message.
 Default app-private layout:
 
 ```text
-tswm-windows-shell.exe
-tswm-process-supervisor.exe
-runtime/python/Scripts/totalsegmentator-wrapper-coordinator.exe
+START_HERE_TotalSegmentatorWrapperForWin.exe
+runtime/native/tswm-process-supervisor.exe
+runtime/python/python.exe -m totalsegmentator_wrapper_mac.coordinator
 runtime/native/totalsegmentator-wrapper-dicom-normalizer.exe
 runtime/native/dcm2niix.exe
 models/totalseg-home/
@@ -44,6 +44,12 @@ models/dentalseg/
 models/toothseg/
 sample1/input/owner_cbct_jawcrop_0p5mm.nii.gz
 ```
+
+The default configuration resolves the runtime, native DICOM tools, output
+directory, and temporary files without an engineering configuration. Results
+and temporary inference files are placed below the current user's
+`LocalAppData\\TotalSegmentatorWrapperWindows`; the distributed directory stays
+read-only at runtime.
 
 An engineering run may pass one absolute JSON path:
 

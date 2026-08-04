@@ -155,11 +155,37 @@ internal sealed record ShellConfiguration(
         }
     }
 
+    internal string PyTorchRuntimeManifestPath => Path.Combine(
+        AppContext.BaseDirectory,
+        "models",
+        "pytorch-runtime-bundle.json");
+
+    internal string UserPythonPackagesRoot => Path.Combine(
+        Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+        "TotalSegmentatorWrapperWindows",
+        "runtime",
+        "python-site-packages");
+
+    internal bool PyTorchRuntimeReady =>
+        File.Exists(Path.Combine(
+            CoordinatorWorkingDirectory,
+            "Lib",
+            "site-packages",
+            "torch",
+            "__init__.py"))
+        || PyTorchRuntimeMarkerIsReady(
+            Path.Combine(
+                UserPythonPackagesRoot,
+                ".pytorch_runtime_ready.json"));
+
     internal bool CanPrepareTotalSegmentatorModel =>
         (!TotalSegmentatorModelReady
+            || !PyTorchRuntimeReady
             || TotalSegmentatorModelUpdateAvailable)
         && File.Exists(CoordinatorPath)
-        && File.Exists(TotalSegmentatorModelManifestPath);
+        && File.Exists(TotalSegmentatorModelManifestPath)
+        && (PyTorchRuntimeReady || File.Exists(PyTorchRuntimeManifestPath));
 
     internal bool TotalSegmentatorModelUpdateAvailable =>
         TotalSegmentatorModelReady
@@ -181,8 +207,11 @@ internal sealed record ShellConfiguration(
                 File.ReadAllText(markerPath));
             var manifestRoot = manifest.RootElement;
             var markerRoot = marker.RootElement;
-            if (StringValue(manifestRoot, "schema") !=
+            var manifestSchema = StringValue(manifestRoot, "schema");
+            if ((manifestSchema !=
                     "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1"
+                && manifestSchema !=
+                    "totalsegmentator_wrapper.windows_totalseg_official_assets.v1")
                 || StringValue(markerRoot, "schema") !=
                     "totalsegmentator_wrapper.windows_totalseg_model_ready.v1"
                 || !manifestRoot.TryGetProperty(
@@ -211,6 +240,28 @@ internal sealed record ShellConfiguration(
             && property.ValueKind == JsonValueKind.String
                 ? property.GetString()
                 : null;
+
+    private static bool PyTorchRuntimeMarkerIsReady(string markerPath)
+    {
+        try
+        {
+            using var marker = JsonDocument.Parse(File.ReadAllText(markerPath));
+            var root = marker.RootElement;
+            return StringValue(root, "schema") ==
+                    "totalsegmentator_wrapper.windows_pytorch_runtime_ready.v1"
+                && StringValue(root, "bundle_id") == "pytorch-cuda"
+                && StringValue(root, "version") ==
+                    "2.11.0+cu126-cp312-win-x64"
+                && StringValue(root, "sha256") is { Length: 64 };
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or JsonException)
+        {
+            return false;
+        }
+    }
 
     internal static bool ModelUpdateContractSelfTest()
     {
@@ -278,6 +329,10 @@ internal sealed record ShellConfiguration(
             failures);
         if (includeModels)
         {
+            if (!PyTorchRuntimeReady)
+            {
+                failures.Add("PyTorch CUDA実行環境が準備されていません。");
+            }
             CheckDirectory(
                 TotalSegmentatorHome,
                 "同梱済みのモデル",

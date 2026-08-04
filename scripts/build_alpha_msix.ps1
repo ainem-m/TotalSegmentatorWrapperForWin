@@ -62,6 +62,39 @@ function Copy-Tree([string]$Source, [string]$Destination) {
     }
 }
 
+function Get-ValidatedDicomNormalizer([string]$Path) {
+    $doctorOutput = & $Path doctor
+    if ($LASTEXITCODE -ne 0) {
+        throw "DICOM normalizer doctor failed with exit code $LASTEXITCODE."
+    }
+    try {
+        $doctor = ($doctorOutput | Out-String | ConvertFrom-Json)
+    }
+    catch {
+        throw "DICOM normalizer doctor did not produce valid JSON."
+    }
+    $mprCapability = if ($null -eq $doctor.capabilities) {
+        $null
+    }
+    else {
+        $doctor.capabilities.PSObject.Properties[
+            "three_plane_mpr_preview"
+        ]
+    }
+    if (
+        $doctor.schema -ne
+            "totalsegmentator_wrapper_mac.dicom_normalizer.doctor.v1" -or
+        $doctor.status -ne "ok" -or
+        $null -eq $mprCapability -or
+        $mprCapability.Value -ne $true
+    ) {
+        throw (
+            "DICOM normalizer must report the three_plane_mpr_preview " +
+            "capability. Rebuild it from this repository before packaging."
+        )
+    }
+}
+
 $winApp = Resolve-RequiredFile $WinAppPath "winapp CLI"
 $dotnet = Resolve-RequiredFile $DotNetPath ".NET SDK"
 $dotnetPackages = Resolve-RequiredDirectory `
@@ -70,6 +103,7 @@ $dotnetPackages = Resolve-RequiredDirectory `
 $pythonRuntime = Resolve-RequiredDirectory $PythonRuntimeRoot "Python runtime"
 $totalSegHome = Resolve-RequiredDirectory $TotalSegmentatorHome "TotalSegmentator model root"
 $dicomNormalizer = Resolve-RequiredFile $DicomNormalizerPath "DICOM normalizer"
+Get-ValidatedDicomNormalizer $dicomNormalizer | Out-Null
 $dcm2niix = Resolve-RequiredFile $Dcm2niixPath "dcm2niix"
 
 $requiredDotNetPackages = [ordered]@{

@@ -1,0 +1,33 @@
+{
+  "schema": "totalsegmentator_wrapper.windows_totalseg_official_assets.v1",
+  "bundle_id": "craniofacial",
+  "version": "official-releases-2026-08-04",
+  "sha256": "b7502691acdc87153155d70296eded512b02cefac6adf1ecac9a13564bf6a6a8",
+  "size_bytes": 365707572,
+  "datasets": [
+    "Dataset115_mandible",
+    "Dataset297_TotalSegmentator_total_3mm_1559subj"
+  ],
+  "legal_files": [
+    "TotalSegmentator-Apache-2.0.txt",
+    "TotalSegmentator-model-bundle-NOTICE.txt",
+    "totalsegmentator_task_inventory.json"
+  ],
+  "fallback_allowed": false,
+  "assets": [
+    {
+      "dataset": "Dataset115_mandible",
+      "url": "https://github.com/wasserth/TotalSegmentator/releases/download/v2.5.0-weights/Dataset115_mandible.zip",
+      "sha256": "a9f4a7bd92e093fc0bb5a06450989429df2da1cc4e470d54373b2f3a3175eab9",
+      "size_bytes": 230321497,
+      "archive_root": "Dataset115_mandible"
+    },
+    {
+      "dataset": "Dataset297_TotalSegmentator_total_3mm_1559subj",
+      "url": "https://github.com/wasserth/TotalSegmentator/releases/download/v2.0.0-weights/Dataset297_TotalSegmentator_total_3mm_1559subj.zip",
+      "sha256": "0baa2c8de2975600eb31801dd5c1825cd2b356f794498659cf3348714c073394",
+      "size_bytes": 135386075,
+      "archive_root": "Dataset297_TotalSegmentator_total_3mm_1559subj"
+    }
+  ]
+}
