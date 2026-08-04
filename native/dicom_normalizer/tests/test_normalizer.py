@@ -295,6 +295,7 @@ def test_doctor(binary: Path) -> None:
     assert payload["capabilities"]["convert_clean"] is True
     assert payload["capabilities"]["prepare_rescue"] is True
     assert payload["capabilities"]["export_rescue_stack"] is True
+    assert payload["capabilities"]["three_plane_mpr_preview"] is True
     assert payload["capabilities"]["native_compressed_pixel_decode"] is True
     assert payload["capabilities"]["native_lossless_transcode"] is True
     assert payload["capabilities"]["enhanced_ct_per_frame_geometry_validation"] is False

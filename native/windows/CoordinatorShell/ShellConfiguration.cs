@@ -7,6 +7,7 @@ namespace TotalSegmentatorWrapper.Windows.CoordinatorShell;
 internal sealed record ShellConfiguration(
     string SupervisorPath,
     string CoordinatorPath,
+    IReadOnlyList<string> CoordinatorArguments,
     string CoordinatorWorkingDirectory,
     string BundledSamplePath,
     string OutputRoot,
@@ -14,7 +15,8 @@ internal sealed record ShellConfiguration(
     string DicomNormalizerPath,
     string Dcm2niixPath,
     string DentalSegmentatorModelRoot,
-    string ToothSegModelRoot)
+    string ToothSegModelRoot,
+    string TotalSegmentatorModelManifestPath)
 {
     internal string BundledSamplePreviewPath
     {
@@ -41,12 +43,29 @@ internal sealed record ShellConfiguration(
         if (engineeringConfigPath is null)
         {
             var runtime = Path.Combine(baseDirectory, "runtime", "python");
+            var bundledTotalSegmentatorHome = Path.Combine(
+                baseDirectory,
+                "models",
+                "totalseg-home");
+            var userTotalSegmentatorHome = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "TotalSegmentatorWrapperWindows",
+                "models",
+                "totalseg-home");
+            var supervisor = Path.Combine(
+                nativeRuntime,
+                "tswm-process-supervisor.exe");
+            if (!File.Exists(supervisor))
+            {
+                supervisor = Path.Combine(
+                    baseDirectory,
+                    "tswm-process-supervisor.exe");
+            }
             return new ShellConfiguration(
-                Path.Combine(baseDirectory, "tswm-process-supervisor.exe"),
-                Path.Combine(
-                    runtime,
-                    "Scripts",
-                    "totalsegmentator-wrapper-coordinator.exe"),
+                supervisor,
+                Path.Combine(runtime, "python.exe"),
+                ["-m", "totalsegmentator_wrapper_mac.coordinator"],
                 runtime,
                 Path.Combine(
                     baseDirectory,
@@ -58,13 +77,19 @@ internal sealed record ShellConfiguration(
                         Environment.SpecialFolder.LocalApplicationData),
                     "TotalSegmentatorWrapperWindows",
                     "runs"),
-                Path.Combine(baseDirectory, "models", "totalseg-home"),
+                Directory.Exists(bundledTotalSegmentatorHome)
+                    ? bundledTotalSegmentatorHome
+                    : userTotalSegmentatorHome,
                 Path.Combine(
                     nativeRuntime,
                     "totalsegmentator-wrapper-dicom-normalizer.exe"),
                 Path.Combine(nativeRuntime, "dcm2niix.exe"),
                 Path.Combine(baseDirectory, "models", "dentalseg"),
-                Path.Combine(baseDirectory, "models", "toothseg"));
+                Path.Combine(baseDirectory, "models", "toothseg"),
+                Path.Combine(
+                    baseDirectory,
+                    "models",
+                    "totalseg-model-bundle.json"));
         }
 
         var absoluteConfigPath = Path.GetFullPath(engineeringConfigPath);
@@ -82,6 +107,7 @@ internal sealed record ShellConfiguration(
         return new ShellConfiguration(
             RequireAbsolute(payload.SupervisorPath, "supervisor_path"),
             RequireAbsolute(payload.CoordinatorPath, "coordinator_path"),
+            [],
             RequireAbsolute(
                 payload.CoordinatorWorkingDirectory,
                 "coordinator_working_directory"),
@@ -105,10 +131,189 @@ internal sealed record ShellConfiguration(
             OptionalAbsolute(
                 payload.ToothSegModelRoot,
                 Path.Combine(baseDirectory, "models", "toothseg"),
-                "toothseg_model_root"));
+                "toothseg_model_root"),
+            OptionalAbsolute(
+                payload.TotalSegmentatorModelManifestPath,
+                Path.Combine(
+                    baseDirectory,
+                    "models",
+                    "totalseg-model-bundle.json"),
+                "totalseg_model_manifest_path"));
+    }
+
+    internal bool TotalSegmentatorModelReady
+    {
+        get
+        {
+            var failures = new List<string>();
+            CheckDirectory(
+                TotalSegmentatorHome,
+                "TotalSegmentator model",
+                failures);
+            CheckTotalSegmentatorCache(failures);
+            return failures.Count == 0;
+        }
+    }
+
+    internal string PyTorchRuntimeManifestPath => Path.Combine(
+        AppContext.BaseDirectory,
+        "models",
+        "pytorch-runtime-bundle.json");
+
+    internal string UserPythonPackagesRoot => Path.Combine(
+        Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+        "TotalSegmentatorWrapperWindows",
+        "runtime",
+        "python-site-packages");
+
+    internal bool PyTorchRuntimeReady =>
+        File.Exists(Path.Combine(
+            CoordinatorWorkingDirectory,
+            "Lib",
+            "site-packages",
+            "torch",
+            "__init__.py"))
+        || PyTorchRuntimeMarkerIsReady(
+            Path.Combine(
+                UserPythonPackagesRoot,
+                ".pytorch_runtime_ready.json"));
+
+    internal bool CanPrepareTotalSegmentatorModel =>
+        (!TotalSegmentatorModelReady
+            || !PyTorchRuntimeReady
+            || TotalSegmentatorModelUpdateAvailable)
+        && File.Exists(CoordinatorPath)
+        && File.Exists(TotalSegmentatorModelManifestPath)
+        && (PyTorchRuntimeReady || File.Exists(PyTorchRuntimeManifestPath));
+
+    internal bool TotalSegmentatorModelUpdateAvailable =>
+        TotalSegmentatorModelReady
+        && ModelManifestDiffersFromReadyMarker(
+            TotalSegmentatorModelManifestPath,
+            Path.Combine(
+                TotalSegmentatorHome,
+                ".totalseg_model_ready.json"));
+
+    private static bool ModelManifestDiffersFromReadyMarker(
+        string manifestPath,
+        string markerPath)
+    {
+        try
+        {
+            using var manifest = JsonDocument.Parse(
+                File.ReadAllText(manifestPath));
+            using var marker = JsonDocument.Parse(
+                File.ReadAllText(markerPath));
+            var manifestRoot = manifest.RootElement;
+            var markerRoot = marker.RootElement;
+            var manifestSchema = StringValue(manifestRoot, "schema");
+            if ((manifestSchema !=
+                    "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1"
+                && manifestSchema !=
+                    "totalsegmentator_wrapper.windows_totalseg_official_assets.v1")
+                || StringValue(markerRoot, "schema") !=
+                    "totalsegmentator_wrapper.windows_totalseg_model_ready.v1"
+                || !manifestRoot.TryGetProperty(
+                    "fallback_allowed",
+                    out var fallbackAllowed)
+                || fallbackAllowed.ValueKind != JsonValueKind.False)
+            {
+                return false;
+            }
+            return new[] { "bundle_id", "version", "sha256" }
+                .Any(key =>
+                    StringValue(manifestRoot, key) is { Length: > 0 } desired
+                    && desired != StringValue(markerRoot, key));
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string? StringValue(JsonElement value, string name) =>
+        value.TryGetProperty(name, out var property)
+            && property.ValueKind == JsonValueKind.String
+                ? property.GetString()
+                : null;
+
+    private static bool PyTorchRuntimeMarkerIsReady(string markerPath)
+    {
+        try
+        {
+            using var marker = JsonDocument.Parse(File.ReadAllText(markerPath));
+            var root = marker.RootElement;
+            return StringValue(root, "schema") ==
+                    "totalsegmentator_wrapper.windows_pytorch_runtime_ready.v1"
+                && StringValue(root, "bundle_id") == "pytorch-cuda"
+                && StringValue(root, "version") ==
+                    "2.11.0+cu126-cp312-win-x64"
+                && StringValue(root, "sha256") is { Length: 64 };
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or JsonException)
+        {
+            return false;
+        }
+    }
+
+    internal static bool ModelUpdateContractSelfTest()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"tswm-model-update-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var manifestPath = Path.Combine(root, "manifest.json");
+            var markerPath = Path.Combine(root, "marker.json");
+            File.WriteAllText(
+                manifestPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_bundle.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"2\","
+                + "\"sha256\":\"new\",\"fallback_allowed\":false}");
+            File.WriteAllText(
+                markerPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_ready.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"1\","
+                + "\"sha256\":\"old\"}");
+            var updateAvailable = ModelManifestDiffersFromReadyMarker(
+                manifestPath,
+                markerPath);
+            File.WriteAllText(
+                markerPath,
+                "{\"schema\":\"totalsegmentator_wrapper.windows_totalseg_model_ready.v1\","
+                + "\"bundle_id\":\"craniofacial\",\"version\":\"2\","
+                + "\"sha256\":\"new\"}");
+            var matchingMarkerDoesNotOfferUpdate =
+                !ModelManifestDiffersFromReadyMarker(
+                    manifestPath,
+                    markerPath);
+            return updateAvailable && matchingMarkerDoesNotOfferUpdate;
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     internal RuntimeCheckResult CheckRuntime()
+    {
+        return CheckRuntime(includeModels: true);
+    }
+
+    internal RuntimeCheckResult CheckBootstrapRuntime()
+    {
+        return CheckRuntime(includeModels: false);
+    }
+
+    private RuntimeCheckResult CheckRuntime(bool includeModels)
     {
         var failures = new List<string>();
         CheckFile(SupervisorPath, "Windowsの処理管理機能", failures);
@@ -122,11 +327,18 @@ internal sealed record ShellConfiguration(
             BundledSamplePreviewPath,
             "同梱Sample 1の3Dプレビュー",
             failures);
-        CheckDirectory(
-            TotalSegmentatorHome,
-            "同梱済みのモデル",
-            failures);
-        CheckTotalSegmentatorCache(failures);
+        if (includeModels)
+        {
+            if (!PyTorchRuntimeReady)
+            {
+                failures.Add("PyTorch CUDA実行環境が準備されていません。");
+            }
+            CheckDirectory(
+                TotalSegmentatorHome,
+                "同梱済みのモデル",
+                failures);
+            CheckTotalSegmentatorCache(failures);
+        }
         try
         {
             Directory.CreateDirectory(OutputRoot);
@@ -504,6 +716,9 @@ internal sealed record ShellConfiguration(
 
         [JsonPropertyName("toothseg_model_root")]
         public string? ToothSegModelRoot { get; init; }
+
+        [JsonPropertyName("totalseg_model_manifest_path")]
+        public string? TotalSegmentatorModelManifestPath { get; init; }
     }
 }
 

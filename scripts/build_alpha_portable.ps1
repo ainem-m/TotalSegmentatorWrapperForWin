@@ -1,0 +1,791 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$DotNetPath,
+    [Parameter(Mandatory = $true)]
+    [string]$DotNetPackageSource,
+    [Parameter(Mandatory = $true)]
+    [string]$PythonRuntimeRoot,
+    [Parameter(Mandatory = $true)]
+    [string]$TotalSegmentatorHome,
+    [Parameter(Mandatory = $true)]
+    [string]$DicomNormalizerPath,
+    [Parameter(Mandatory = $true)]
+    [string]$Dcm2niixPath,
+    [Parameter(Mandatory = $true)]
+    [string]$WorkRoot,
+    [Parameter(Mandatory = $true)]
+    [string]$OutputDirectory,
+    [ValidateSet("Bundled", "OnDemand")]
+    [string]$ModelDelivery = "Bundled",
+    [string]$ModelBundleManifestPath,
+    [ValidatePattern("^\d+\.\d+\.\d+\.\d+$")]
+    [string]$Version = "0.1.0.0",
+    [switch]$KeepStaging
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$portableDirectoryName = "TSW"
+$portableEntrypoint = "START_HERE_TotalSegmentatorWrapperForWin.exe"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+
+function Resolve-RequiredFile([string]$Path, [string]$Label) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$Label was not found."
+    }
+    return (Resolve-Path -LiteralPath $Path).Path
+}
+
+function Resolve-RequiredDirectory([string]$Path, [string]$Label) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        throw "$Label was not found."
+    }
+    return (Resolve-Path -LiteralPath $Path).Path
+}
+
+function Invoke-Checked([string]$Label, [scriptblock]$Command) {
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Label failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Copy-Tree([string]$Source, [string]$Destination) {
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    & robocopy `
+        $Source `
+        $Destination `
+        /E /COPY:DAT /DCOPY:DAT /R:1 /W:1 /MT:16 `
+        /NFL /NDL /NJH /NJS /NP
+    if ($LASTEXITCODE -gt 7) {
+        throw "Payload copy failed with robocopy exit code $LASTEXITCODE."
+    }
+}
+
+function Get-ValidatedDicomNormalizer([string]$Path) {
+    $doctorOutput = & $Path doctor
+    if ($LASTEXITCODE -ne 0) {
+        throw "DICOM normalizer doctor failed with exit code $LASTEXITCODE."
+    }
+    try {
+        $doctor = ($doctorOutput | Out-String | ConvertFrom-Json)
+    }
+    catch {
+        throw "DICOM normalizer doctor did not produce valid JSON."
+    }
+    $mprCapability = if ($null -eq $doctor.capabilities) {
+        $null
+    }
+    else {
+        $doctor.capabilities.PSObject.Properties[
+            "three_plane_mpr_preview"
+        ]
+    }
+    if (
+        $doctor.schema -ne
+            "totalsegmentator_wrapper_mac.dicom_normalizer.doctor.v1" -or
+        $doctor.status -ne "ok" -or
+        $null -eq $mprCapability -or
+        $mprCapability.Value -ne $true
+    ) {
+        throw (
+            "DICOM normalizer must report the three_plane_mpr_preview " +
+            "capability. Rebuild it from this repository before packaging."
+        )
+    }
+    [pscustomobject]@{
+        version = [string]$doctor.tool.version
+        sha256 = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+        three_plane_mpr_preview = $true
+    }
+}
+
+$dotnet = Resolve-RequiredFile $DotNetPath ".NET SDK"
+$dotnetPackages = Resolve-RequiredDirectory `
+    $DotNetPackageSource `
+    ".NET runtime package source"
+$pythonRuntime = Resolve-RequiredDirectory $PythonRuntimeRoot "Python runtime"
+$totalSegHome = Resolve-RequiredDirectory `
+    $TotalSegmentatorHome `
+    "TotalSegmentator model root"
+$dicomNormalizer = Resolve-RequiredFile `
+    $DicomNormalizerPath `
+    "DICOM normalizer"
+$dicomNormalizerEvidence = Get-ValidatedDicomNormalizer $dicomNormalizer
+$dcm2niix = Resolve-RequiredFile $Dcm2niixPath "dcm2niix"
+$modelBundleManifest = $null
+$modelBundle = $null
+$pytorchRuntimeManifest = Resolve-RequiredFile `
+    (Join-Path `
+        $repoRoot `
+        "resources\runtime_bundles\pytorch-cu126-cp312-win-x64-v1.json") `
+    "PyTorch CUDA runtime manifest"
+$pytorchRuntimeBundle = Get-Content `
+    -LiteralPath $pytorchRuntimeManifest `
+    -Raw |
+    ConvertFrom-Json
+if (
+    $pytorchRuntimeBundle.schema -ne
+        "totalsegmentator_wrapper.windows_pytorch_runtime_bundle.v1" -or
+    $pytorchRuntimeBundle.bundle_id -ne "pytorch-cuda" -or
+    $pytorchRuntimeBundle.version -ne "2.11.0+cu126-cp312-win-x64" -or
+    $pytorchRuntimeBundle.package -ne "torch" -or
+    $pytorchRuntimeBundle.python_version -ne "3.12" -or
+    $pytorchRuntimeBundle.torch_version -ne "2.11.0+cu126" -or
+    $pytorchRuntimeBundle.cuda_version -ne "12.6" -or
+    $pytorchRuntimeBundle.wheel_filename -ne (
+        "torch-2.11.0+cu126-cp312-cp312-win_amd64.whl"
+    ) -or
+    $pytorchRuntimeBundle.url -notmatch (
+        "^https://download\.pytorch\.org/whl/cu126/"
+    ) -or
+    $pytorchRuntimeBundle.sha256 -notmatch "^[0-9a-f]{64}$" -or
+    $pytorchRuntimeBundle.size_bytes -le 0 -or
+    $pytorchRuntimeBundle.fallback_allowed -ne $false
+) {
+    throw "The PyTorch CUDA runtime manifest is invalid."
+}
+if ($ModelDelivery -eq "OnDemand") {
+    $modelBundleManifest = Resolve-RequiredFile `
+        $ModelBundleManifestPath `
+        "TotalSegmentator model bundle manifest"
+    $modelBundle = Get-Content -LiteralPath $modelBundleManifest -Raw |
+        ConvertFrom-Json
+    $expectedLegalFiles = (
+        "TotalSegmentator-Apache-2.0.txt," +
+        "TotalSegmentator-model-bundle-NOTICE.txt," +
+        "totalsegmentator_task_inventory.json"
+    )
+    $expectedDatasets = (
+        "Dataset115_mandible," +
+        "Dataset297_TotalSegmentator_total_3mm_1559subj"
+    )
+    $isLegacyBundle = $modelBundle.schema -eq
+        "totalsegmentator_wrapper.windows_totalseg_model_bundle.v1"
+    $isOfficialAssetsBundle = $modelBundle.schema -eq
+        "totalsegmentator_wrapper.windows_totalseg_official_assets.v1"
+    $hasExpectedSharedContract = (
+        $modelBundle.sha256 -match "^[0-9a-f]{64}$" -and
+        $modelBundle.size_bytes -gt 0 -and
+        $modelBundle.fallback_allowed -eq $false -and
+        (@($modelBundle.legal_files) -join ",") -eq $expectedLegalFiles -and
+        (@($modelBundle.datasets) -join ",") -eq $expectedDatasets
+    )
+    $hasValidOfficialAssets = $false
+    if ($isOfficialAssetsBundle) {
+        $assets = @($modelBundle.assets)
+        $hasValidOfficialAssets = $assets.Count -eq 2
+        foreach ($index in 0..1) {
+            $asset = if ($index -lt $assets.Count) { $assets[$index] } else { $null }
+            $dataset = @(
+                "Dataset115_mandible",
+                "Dataset297_TotalSegmentator_total_3mm_1559subj"
+            )[$index]
+            if (
+                $null -eq $asset -or
+                $asset.dataset -ne $dataset -or
+                $asset.archive_root -ne $dataset -or
+                $asset.url -notmatch (
+                    "^https://github\.com/wasserth/TotalSegmentator/" +
+                    "releases/download/"
+                ) -or
+                $asset.sha256 -notmatch "^[0-9a-f]{64}$" -or
+                $asset.size_bytes -le 0
+            ) {
+                $hasValidOfficialAssets = $false
+            }
+        }
+    }
+    if (
+        -not $hasExpectedSharedContract -or
+        ($isLegacyBundle -and (
+            $modelBundle.url -notmatch "^https://" -or
+            $modelBundle.archive_root -ne "totalseg-home"
+        )) -or
+        ($isOfficialAssetsBundle -and -not $hasValidOfficialAssets) -or
+        (-not $isLegacyBundle -and -not $isOfficialAssetsBundle)
+    ) {
+        throw "The TotalSegmentator model bundle manifest is invalid."
+    }
+}
+
+$requiredDotNetPackages = [ordered]@{
+    "microsoft.aspnetcore.app.runtime.win-x64.10.0.10.nupkg" =
+        "1669e0b37959ad5d6306dccc1991ee15863fd08f65dc40fd2addcaffd235d977"
+    "microsoft.netcore.app.runtime.win-x64.10.0.10.nupkg" =
+        "56899c9057d6981ab9f237d6489e469af043668ab34cfb4199b55f92702b06bb"
+    "microsoft.windowsdesktop.app.runtime.win-x64.10.0.10.nupkg" =
+        "f57afeb29ba87f687cb5fd6693c82a1161e8b28e79cf380a02087f4c2ba35758"
+}
+$dotNetPackageEvidence = foreach (
+    $entry in $requiredDotNetPackages.GetEnumerator()
+) {
+    $packagePath = Resolve-RequiredFile `
+        (Join-Path $dotnetPackages $entry.Key) `
+        ".NET runtime package"
+    $actualHash = (
+        Get-FileHash -LiteralPath $packagePath -Algorithm SHA256
+    ).Hash.ToLowerInvariant()
+    if ($actualHash -ne $entry.Value) {
+        throw "A .NET runtime package hash does not match the pinned closure."
+    }
+    [pscustomobject]@{
+        file = $entry.Key
+        sha256 = $actualHash
+    }
+}
+
+Resolve-RequiredFile `
+    (Join-Path $pythonRuntime "python.exe") `
+    "app-private Python" | Out-Null
+Resolve-RequiredFile `
+    (Join-Path $totalSegHome "config.json") `
+    "TotalSegmentator config" | Out-Null
+$requiredDatasets = @(
+    "Dataset115_mandible",
+    "Dataset297_TotalSegmentator_total_3mm_1559subj"
+)
+foreach ($dataset in $requiredDatasets) {
+    $datasetRoot = Join-Path $totalSegHome "nnunet\results\$dataset"
+    Resolve-RequiredDirectory $datasetRoot $dataset | Out-Null
+    $checkpoint = Get-ChildItem `
+        -LiteralPath $datasetRoot `
+        -Filter "checkpoint_final.pth" `
+        -File `
+        -Recurse |
+        Where-Object Length -gt 0 |
+        Select-Object -First 1
+    if ($null -eq $checkpoint) {
+        throw "A non-empty checkpoint was not found for $dataset."
+    }
+}
+
+$totalSegConfig = Get-Content `
+    -LiteralPath (Join-Path $totalSegHome "config.json") `
+    -Raw |
+    ConvertFrom-Json
+if ($totalSegConfig.send_usage_stats -ne $false) {
+    throw "TotalSegmentator usage statistics are not disabled."
+}
+
+$absoluteWorkRoot = [IO.Path]::GetFullPath($WorkRoot)
+$absoluteOutput = [IO.Path]::GetFullPath($OutputDirectory)
+New-Item -ItemType Directory -Path $absoluteWorkRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $absoluteOutput -Force | Out-Null
+$buildId = [Guid]::NewGuid().ToString("N")
+$stagingRoot = Join-Path $absoluteWorkRoot "build-$buildId"
+$portableRoot = Join-Path $stagingRoot $portableDirectoryName
+$shellPublish = Join-Path $stagingRoot "shell-publish"
+$supervisorPublish = Join-Path $stagingRoot "supervisor-publish"
+$wheelSource = Join-Path $stagingRoot "wrapper-source"
+$wheelOutput = Join-Path $stagingRoot "wheel"
+$evidenceRoot = Join-Path $stagingRoot "evidence"
+$tempRoot = Join-Path $stagingRoot "temp"
+foreach ($directory in @(
+    $portableRoot,
+    $shellPublish,
+    $supervisorPublish,
+    $wheelSource,
+    $wheelOutput,
+    $evidenceRoot,
+    $tempRoot
+)) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+}
+
+$oldTemp = $env:TEMP
+$oldTmp = $env:TMP
+$oldDotnetTelemetry = $env:DOTNET_CLI_TELEMETRY_OPTOUT
+$oldDotnetNoLogo = $env:DOTNET_NOLOGO
+$oldDotnetHome = $env:DOTNET_CLI_HOME
+$oldPipCache = $env:PIP_CACHE_DIR
+$oldPythonBytecode = $env:PYTHONDONTWRITEBYTECODE
+$env:TEMP = $tempRoot
+$env:TMP = $tempRoot
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+$env:DOTNET_NOLOGO = "1"
+$env:DOTNET_CLI_HOME = Join-Path $stagingRoot "dotnet-home"
+$env:PIP_CACHE_DIR = Join-Path $stagingRoot "pip-cache"
+$env:PYTHONDONTWRITEBYTECODE = "1"
+
+try {
+    $offlineNugetConfig = Join-Path $stagingRoot "NuGet.Config"
+    $escapedDotNetPackages = [Security.SecurityElement]::Escape(
+        $dotnetPackages
+    )
+    Set-Content `
+        -LiteralPath $offlineNugetConfig `
+        -Encoding ascii `
+        -Value @(
+            '<?xml version="1.0" encoding="utf-8"?>',
+            '<configuration>',
+            '  <packageSources>',
+            '    <clear />',
+            ('    <add key="alpha-runtime-packs" value="{0}" />' -f
+                $escapedDotNetPackages),
+            '  </packageSources>',
+            '</configuration>'
+        )
+    foreach ($project in @(
+        (Join-Path `
+            $repoRoot `
+            "native\windows\CoordinatorShell\CoordinatorShell.csproj"),
+        (Join-Path `
+            $repoRoot `
+            "native\windows\ProcessSupervisor\ProcessSupervisor.csproj")
+    )) {
+        Invoke-Checked "offline .NET restore" {
+            & $dotnet restore `
+                $project `
+                --runtime win-x64 `
+                --configfile $offlineNugetConfig `
+                -p:NuGetAudit=false
+        }
+    }
+    Invoke-Checked "WPF self-contained publish" {
+        & $dotnet publish `
+            (Join-Path `
+                $repoRoot `
+                "native\windows\CoordinatorShell\CoordinatorShell.csproj") `
+            -c Release `
+            -r win-x64 `
+            --no-restore `
+            --self-contained true `
+            -p:PublishSingleFile=false `
+            -p:UseSharedCompilation=false `
+            -o $shellPublish
+    }
+    Invoke-Checked "Job Object supervisor self-contained publish" {
+        & $dotnet publish `
+            (Join-Path `
+                $repoRoot `
+                "native\windows\ProcessSupervisor\ProcessSupervisor.csproj") `
+            -c Release `
+            -r win-x64 `
+            --no-restore `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:UseSharedCompilation=false `
+            -o $supervisorPublish
+    }
+    Copy-Tree $shellPublish $portableRoot
+    Move-Item `
+        -LiteralPath (Join-Path $portableRoot "tswm-windows-shell.exe") `
+        -Destination (Join-Path $portableRoot $portableEntrypoint)
+    Remove-Item `
+        -LiteralPath (Join-Path $portableRoot "createdump.exe") `
+        -Force
+
+    Copy-Tree $pythonRuntime (Join-Path $portableRoot "runtime\python")
+    if ($ModelDelivery -eq "Bundled") {
+        Copy-Tree $totalSegHome `
+            (Join-Path $portableRoot "models\totalseg-home")
+    }
+    else {
+        $modelsRoot = Join-Path $portableRoot "models"
+        New-Item -ItemType Directory -Path $modelsRoot -Force | Out-Null
+        Copy-Item `
+            -LiteralPath $modelBundleManifest `
+            -Destination (Join-Path $modelsRoot "totalseg-model-bundle.json")
+        Copy-Item `
+            -LiteralPath $pytorchRuntimeManifest `
+            -Destination (Join-Path $modelsRoot "pytorch-runtime-bundle.json")
+    }
+    Copy-Tree `
+        (Join-Path $repoRoot "resources\sample1") `
+        (Join-Path $portableRoot "sample1")
+
+    $nativeRoot = Join-Path $portableRoot "runtime\native"
+    New-Item -ItemType Directory -Path $nativeRoot -Force | Out-Null
+    Copy-Item `
+        (Join-Path $supervisorPublish "tswm-process-supervisor.exe") `
+        $nativeRoot
+    Copy-Item $dicomNormalizer `
+        (Join-Path $nativeRoot "totalsegmentator-wrapper-dicom-normalizer.exe")
+    Copy-Item $dcm2niix (Join-Path $nativeRoot "dcm2niix.exe")
+
+    $pythonSitePackages = Join-Path `
+        $portableRoot `
+        "runtime\python\Lib\site-packages"
+    $futureTestFixtures = Join-Path `
+        $pythonSitePackages `
+        "future\backports\test"
+    if (Test-Path -LiteralPath $futureTestFixtures) {
+        Remove-Item -LiteralPath $futureTestFixtures -Recurse -Force
+    }
+    $privateKeyLikeFiles = @(
+        Get-ChildItem $portableRoot -File -Recurse |
+        Where-Object {
+            $_.Extension -in @(".pfx", ".key") -or
+            $_.Name -match "(?i)key.*\.pem$"
+        }
+    )
+    if ($privateKeyLikeFiles.Count -ne 0) {
+        throw "A private-key-like file remains in the portable payload."
+    }
+
+    Copy-Item (Join-Path $repoRoot "pyproject.toml") $wheelSource
+    foreach ($name in @(
+        "README.md",
+        "LICENSE",
+        "NOTICE",
+        "THIRD_PARTY_NOTICES.md"
+    )) {
+        Copy-Item (Join-Path $repoRoot $name) $wheelSource
+    }
+    Copy-Tree (Join-Path $repoRoot "src") (Join-Path $wheelSource "src")
+    $stagedPython = Join-Path $portableRoot "runtime\python\python.exe"
+    Invoke-Checked "wrapper wheel build" {
+        & $stagedPython -m pip wheel `
+            $wheelSource `
+            --no-deps `
+            --no-build-isolation `
+            --no-index `
+            --wheel-dir $wheelOutput
+    }
+    $wrapperWheels = @(Get-ChildItem $wheelOutput -Filter "*.whl" -File)
+    if ($wrapperWheels.Count -ne 1) {
+        throw "Exactly one first-party wrapper wheel is required."
+    }
+    Invoke-Checked "wrapper offline install" {
+        & $stagedPython -m pip install `
+            --no-index `
+            --no-deps `
+            --force-reinstall `
+            --no-warn-script-location `
+            $wrapperWheels[0].FullName
+    }
+    $legacyMetadata = @(
+        Get-ChildItem `
+            -LiteralPath $pythonSitePackages `
+            -Directory `
+            -Filter "totalsegmentator_wrapper_mac-*.dist-info"
+    )
+    foreach ($metadataDirectory in $legacyMetadata) {
+        if ($metadataDirectory.Parent.FullName -ne $pythonSitePackages) {
+            throw "Legacy wrapper metadata is outside site-packages."
+        }
+        Remove-Item -LiteralPath $metadataDirectory.FullName -Recurse -Force
+    }
+    if (Get-ChildItem `
+        -LiteralPath $pythonSitePackages `
+        -Directory `
+        -Filter "totalsegmentator_wrapper_mac-*.dist-info"
+    ) {
+        throw "Legacy wrapper distribution metadata remains."
+    }
+
+    $legalRoot = Join-Path $portableRoot "legal"
+    New-Item -ItemType Directory -Path $legalRoot -Force | Out-Null
+    foreach ($name in @(
+        "LICENSE",
+        "NOTICE",
+        "THIRD_PARTY_NOTICES.md"
+    )) {
+        Copy-Item (Join-Path $repoRoot $name) $legalRoot
+    }
+    Copy-Tree `
+        (Join-Path $repoRoot "resources\third_party") `
+        (Join-Path $legalRoot "third_party")
+    Invoke-Checked "runtime license inventory" {
+        & $stagedPython `
+            (Join-Path $repoRoot "scripts\write_runtime_license_inventory.py") `
+            --output (Join-Path $legalRoot "runtime-license-inventory.json")
+    }
+
+    Copy-Item `
+        (Join-Path $repoRoot "docs\README_PORTABLE_JA.md") `
+        (Join-Path $portableRoot "README_PORTABLE_JA.md")
+    [pscustomobject]@{
+        schema =
+            "totalsegmentator_wrapper.windows_alpha_portable_payload.v1"
+        package_version = $Version
+        architecture = "x64"
+        entrypoint = $portableEntrypoint
+        extraction_required = $true
+        administrator_required = $false
+        certificate_registration_required = $false
+        install_required = $false
+        results_location = "user_selected_or_local_app_data"
+        distribution_directory_writable = $false
+        model_delivery = $ModelDelivery.ToLowerInvariant()
+        pytorch_runtime_delivery = if ($ModelDelivery -eq "OnDemand") {
+            "ondemand"
+        }
+        else {
+            "bundled"
+        }
+        dicom_normalizer = $dicomNormalizerEvidence
+        bundled_totalsegmentator_datasets = @(
+            if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
+        )
+        bundled_additional_models = @()
+    } |
+        ConvertTo-Json -Depth 5 |
+        Set-Content `
+            -LiteralPath (Join-Path $portableRoot "portable-manifest.json") `
+            -Encoding utf8
+
+    $payloadFiles = @(Get-ChildItem $portableRoot -File -Recurse)
+    $longestInternalPath = (
+        $payloadFiles |
+        ForEach-Object {
+            "$portableDirectoryName\" +
+                $_.FullName.Substring($portableRoot.Length + 1)
+        } |
+        Sort-Object Length -Descending |
+        Select-Object -First 1
+    )
+    $maximumInternalPathCharacters = 180
+    if ($longestInternalPath.Length -gt $maximumInternalPathCharacters) {
+        throw "The portable payload exceeds the Windows Explorer path budget."
+    }
+
+    $portableSelfTest = Join-Path `
+        $evidenceRoot `
+        "portable-self-test.json"
+    $selfTestProcess = Start-Process `
+        -FilePath (Join-Path $portableRoot $portableEntrypoint) `
+        -ArgumentList @("--portable-self-test", $portableSelfTest) `
+        -Wait `
+        -PassThru `
+        -WindowStyle Hidden
+    if ($selfTestProcess.ExitCode -ne 0) {
+        throw "Portable runtime and model self-test failed."
+    }
+    $selfTestPayload = Get-Content `
+        -LiteralPath $portableSelfTest `
+        -Raw |
+        ConvertFrom-Json
+    if ($selfTestPayload.status -ne "pass") {
+        throw "Portable runtime and model evidence did not pass."
+    }
+
+    $supervisorEvidence = Join-Path `
+        $evidenceRoot `
+        "supervisor-self-test.json"
+    Invoke-Checked "Job Object supervisor self-test" {
+        & (Join-Path $nativeRoot "tswm-process-supervisor.exe") `
+            self-test `
+            --evidence $supervisorEvidence
+    }
+    Invoke-Checked "portable pip check" {
+        & $stagedPython -m pip check
+    }
+
+    $runtimeDiagnostic = Join-Path `
+        $evidenceRoot `
+        "runtime-diagnostic.json"
+    Invoke-Checked "portable runtime diagnostic" {
+        & $stagedPython `
+            (Join-Path `
+                $repoRoot `
+                "scripts\write_portable_runtime_diagnostic.py") `
+            --output $runtimeDiagnostic `
+            --totalseg-home $(
+                if ($ModelDelivery -eq "Bundled") {
+                    Join-Path $portableRoot "models\totalseg-home"
+                }
+                else {
+                    $totalSegHome
+                }
+            ) `
+            --cuda-index 0
+    }
+    $diagnosticPayload = Get-Content `
+        -LiteralPath $runtimeDiagnostic `
+        -Raw |
+        ConvertFrom-Json
+    if ($diagnosticPayload.status -ne "pass") {
+        throw "Portable runtime diagnostic evidence did not pass."
+    }
+
+    if ($ModelDelivery -eq "OnDemand") {
+        $torchPackage = Join-Path $pythonSitePackages "torch"
+        $torchMetadata = @(
+            Get-ChildItem `
+                -LiteralPath $pythonSitePackages `
+                -Directory `
+                -Filter "torch-*.dist-info"
+        )
+        if (-not (Test-Path -LiteralPath $torchPackage) -or
+            $torchMetadata.Count -eq 0) {
+            throw "The staged PyTorch CUDA runtime is unavailable."
+        }
+        Remove-Item -LiteralPath $torchPackage -Recurse -Force
+        foreach ($metadata in $torchMetadata) {
+            Remove-Item -LiteralPath $metadata.FullName -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $torchPackage) {
+            throw "The staged PyTorch CUDA runtime was not removed."
+        }
+    }
+
+    $payloadFiles = @(Get-ChildItem $portableRoot -File -Recurse)
+    $longestInternalPath = (
+        $payloadFiles |
+        ForEach-Object {
+            "$portableDirectoryName\" +
+                $_.FullName.Substring($portableRoot.Length + 1)
+        } |
+        Sort-Object Length -Descending |
+        Select-Object -First 1
+    )
+    if ($longestInternalPath.Length -gt $maximumInternalPathCharacters) {
+        throw "The portable payload exceeds the Windows Explorer path budget."
+    }
+    $payloadMeasure = $payloadFiles |
+        Measure-Object Length -Sum
+    $zipFileName = if ($ModelDelivery -eq "OnDemand") {
+        "TSW-Alpha-{0}-ondemand-win-x64.zip" -f $Version
+    }
+    else {
+        "TSW-Alpha-{0}-win-x64.zip" -f $Version
+    }
+    $zipPath = Join-Path $absoluteOutput $zipFileName
+    if (Test-Path -LiteralPath $zipPath) {
+        Remove-Item -LiteralPath $zipPath -Force
+    }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Compression.ZipFile]::CreateFromDirectory(
+        $portableRoot,
+        $zipPath,
+        [IO.Compression.CompressionLevel]::Optimal,
+        $true
+    )
+    if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+        throw "The portable ZIP was not created."
+    }
+
+    $manualOutput = Join-Path $absoluteOutput "README_PORTABLE_JA.md"
+    Copy-Item `
+        (Join-Path $repoRoot "docs\README_PORTABLE_JA.md") `
+        $manualOutput `
+        -Force
+    $zipHash = Get-FileHash $zipPath -Algorithm SHA256
+    $runtimeDevice = $diagnosticPayload.device
+    $buildManifestPath = Join-Path `
+        $absoluteOutput `
+        "build-manifest.json"
+    [pscustomobject]@{
+        schema =
+            "totalsegmentator_wrapper.windows_alpha_portable_build.v1"
+        status = "pass"
+        package_version = $Version
+        architecture = "x64"
+        zip_file = $zipFileName
+        zip_bytes = (Get-Item $zipPath).Length
+        zip_sha256 = $zipHash.Hash.ToLowerInvariant()
+        extracted_file_count = $payloadMeasure.Count
+        extracted_bytes = $payloadMeasure.Sum
+        maximum_internal_path_characters = $longestInternalPath.Length
+        internal_path_budget_characters = $maximumInternalPathCharacters
+        administrator_required = $false
+        powershell_required = $false
+        certificate_registration_required = $false
+        install_required = $false
+        private_key_distributed = $false
+        distribution_directory_writable = $false
+        results_location = "user_selected_or_local_app_data"
+        python_runtime_network_resolution = $false
+        dotnet_runtime_package_network_resolution = $false
+        dotnet_runtime_packages = @($dotNetPackageEvidence)
+        dicom_normalizer = $dicomNormalizerEvidence
+        bundled_totalsegmentator_datasets = @(
+            if ($ModelDelivery -eq "Bundled") { $requiredDatasets }
+        )
+        model_delivery = $ModelDelivery.ToLowerInvariant()
+        model_bundle_version = if ($null -eq $modelBundle) {
+            $null
+        }
+        else {
+            $modelBundle.version
+        }
+        model_bundle_sha256 = if ($null -eq $modelBundle) {
+            $null
+        }
+        else {
+            $modelBundle.sha256
+        }
+        pytorch_runtime_delivery = if ($ModelDelivery -eq "OnDemand") {
+            "ondemand"
+        }
+        else {
+            "bundled"
+        }
+        pytorch_runtime_bundle_version = if ($ModelDelivery -eq "OnDemand") {
+            $pytorchRuntimeBundle.version
+        }
+        else {
+            $null
+        }
+        pytorch_runtime_bundle_sha256 = if ($ModelDelivery -eq "OnDemand") {
+            $pytorchRuntimeBundle.sha256
+        }
+        else {
+            $null
+        }
+        bundled_additional_models = @()
+        portable_self_test = "pass"
+        job_object_supervisor_self_test = "pass"
+        pip_check = "pass"
+        production_imports = "pass"
+        strict_cuda_smoke = $runtimeDevice.status
+        requested_device = $runtimeDevice.requested_device
+        actual_device = $runtimeDevice.actual_device
+        fallback_reason = $runtimeDevice.fallback_reason
+        python = $diagnosticPayload.python
+        torch = $diagnosticPayload.torch
+        torch_cuda_build = $diagnosticPayload.torch_cuda_build
+        totalsegmentator = $diagnosticPayload.totalsegmentator
+        gpu = $runtimeDevice.device_name
+        driver = $runtimeDevice.driver_version
+        windows_10_extracted_payload = "pass"
+        windows_11 = "unverified"
+        clean_machine = "unverified"
+    } |
+        ConvertTo-Json -Depth 8 |
+        Set-Content `
+            -LiteralPath $buildManifestPath `
+            -Encoding utf8
+
+    $hashTargets = @(
+        $zipPath,
+        $manualOutput,
+        $buildManifestPath
+    )
+    $hashLines = foreach ($target in $hashTargets) {
+        $hash = Get-FileHash -LiteralPath $target -Algorithm SHA256
+        "{0}  {1}" -f
+            $hash.Hash.ToLowerInvariant(),
+            (Split-Path -Leaf $target)
+    }
+    Set-Content `
+        -LiteralPath (Join-Path $absoluteOutput "SHA256SUMS.txt") `
+        -Value $hashLines `
+        -Encoding ascii
+
+    Write-Output $zipPath
+}
+finally {
+    $env:TEMP = $oldTemp
+    $env:TMP = $oldTmp
+    $env:DOTNET_CLI_TELEMETRY_OPTOUT = $oldDotnetTelemetry
+    $env:DOTNET_NOLOGO = $oldDotnetNoLogo
+    $env:DOTNET_CLI_HOME = $oldDotnetHome
+    $env:PIP_CACHE_DIR = $oldPipCache
+    $env:PYTHONDONTWRITEBYTECODE = $oldPythonBytecode
+    if (-not $KeepStaging -and (Test-Path -LiteralPath $stagingRoot)) {
+        $resolvedStaging = (Resolve-Path -LiteralPath $stagingRoot).Path
+        $resolvedWork = (Resolve-Path -LiteralPath $absoluteWorkRoot).Path
+        if (-not $resolvedStaging.StartsWith(
+            $resolvedWork + [IO.Path]::DirectorySeparatorChar
+        )) {
+            throw "The staging cleanup target is outside the work root."
+        }
+        Remove-Item -LiteralPath $resolvedStaging -Recurse -Force
+    }
+}

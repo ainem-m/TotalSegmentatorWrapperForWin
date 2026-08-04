@@ -34,9 +34,9 @@ that into the typed coordinator control message.
 Default app-private layout:
 
 ```text
-tswm-windows-shell.exe
-tswm-process-supervisor.exe
-runtime/python/Scripts/totalsegmentator-wrapper-coordinator.exe
+START_HERE_TotalSegmentatorWrapperForWin.exe
+runtime/native/tswm-process-supervisor.exe
+runtime/python/python.exe -m totalsegmentator_wrapper_mac.coordinator
 runtime/native/totalsegmentator-wrapper-dicom-normalizer.exe
 runtime/native/dcm2niix.exe
 models/totalseg-home/
@@ -44,6 +44,12 @@ models/dentalseg/
 models/toothseg/
 sample1/input/owner_cbct_jawcrop_0p5mm.nii.gz
 ```
+
+The default configuration resolves the runtime, native DICOM tools, output
+directory, and temporary files without an engineering configuration. Results
+and temporary inference files are placed below the current user's
+`LocalAppData\\TotalSegmentatorWrapperWindows`; the distributed directory stays
+read-only at runtime.
 
 An engineering run may pass one absolute JSON path:
 
@@ -57,6 +63,13 @@ The JSON keys are `supervisor_path`, `coordinator_path`,
 override the two app-private native defaults above. Optional
 `dentalseg_model_root` overrides the app-private DentalSegmentator model root.
 Optional `toothseg_model_root` overrides the app-private ToothSeg model root.
+Optional `totalseg_model_manifest_path` overrides the fixed on-demand
+TotalSegmentator model bundle manifest. A portable payload without bundled
+TotalSegmentator checkpoints stores the verified model below LocalAppData.
+Its preparation process retains a matching `.part` download for HTTP Range
+resume, verifies exact size and SHA-256, validates both required datasets in
+staging, and only then atomically publishes the model. It never starts CPU or
+another model after a preparation failure.
 Existing NIfTI-only engineering configurations remain valid. This
 configuration is for spike evidence only and is not a dependency installation
 mechanism.
@@ -77,10 +90,11 @@ limit terminates the whole Job. Process stdout and stderr are drained but never
 returned to the shell.
 
 Each audit uses a random UUID workspace below
-`<output_root>/.dicom-intake/`. A clean conversion must produce exactly one
-non-empty `.nii` or `.nii.gz` beneath its conversion output, with matching
-metadata and `segmentation_started=false`, before it can be passed to the
-unchanged NIfTI coordinator operation. A successful conversion also writes
+`<output_root>/.dicom-intake/`. A clean conversion must select a non-empty
+`.nii` or `.nii.gz` beneath its conversion output through the conversion
+metadata, with matching series metadata and `segmentation_started=false`,
+before it can be passed to the unchanged NIfTI coordinator operation. A
+successful conversion also writes
 `dicom-intake-manifest.json`; it contains no paths, DICOM identifiers,
 descriptions, or raw process output.
 

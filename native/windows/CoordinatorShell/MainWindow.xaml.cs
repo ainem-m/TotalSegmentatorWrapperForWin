@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly List<string> _safeEventLog = [];
     private CoordinatorSession? _session;
     private ResultToolsSession? _resultToolsSession;
+    private ModelSetupSession? _modelSetupSession;
     private CoordinatorSessionResult? _lastResult;
     private string? _resultPreviewPath;
     private string? _inputPath;
@@ -55,6 +56,7 @@ public partial class MainWindow : Window
         {
             _dicomSession?.Dispose();
             _resultToolsSession?.Dispose();
+            _modelSetupSession?.Dispose();
             _session?.Dispose();
         };
         OutputDisplayName.Text =
@@ -62,14 +64,68 @@ public partial class MainWindow : Window
         InitializeModelSelection();
         UpdateInputDetails();
         SetScreen(ShellScreen.Setup, "待機中");
+        if (_configuration.CanPrepareTotalSegmentatorModel)
+        {
+            if (_configuration.TotalSegmentatorModelUpdateAvailable)
+            {
+                PrepareButton.Content = "モデルを更新";
+                RuntimeMessage.Text =
+                    "新しいモデルを取得できます。検証が完了するまで現在のモデルを維持します。中断後は続きから再開できます。";
+            }
+            else
+            {
+                PrepareButton.Content = "モデルを取得して準備";
+                RuntimeMessage.Text =
+                    "初回実行に必要なモデルをダウンロードします。中断後は続きから再開できます。";
+            }
+        }
         if (previewScenario is not null)
         {
             ApplyPreviewScenario(previewScenario);
         }
     }
 
-    private void PrepareButton_Click(object sender, RoutedEventArgs e)
+    private async void PrepareButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_configuration.CanPrepareTotalSegmentatorModel)
+        {
+            PrepareButton.IsEnabled = false;
+            RuntimeErrorCode.Visibility = Visibility.Collapsed;
+            RuntimeRecoveryMessage.Visibility = Visibility.Collapsed;
+            StatusPillText.Text = "モデル準備中";
+            _modelSetupSession?.Dispose();
+            _modelSetupSession = new ModelSetupSession(_configuration);
+            var preparation = await _modelSetupSession.PrepareAsync(
+                progress => Dispatcher.Invoke(() =>
+                {
+                    RuntimeMessage.Text = progress.Percent is { } percent
+                        ? $"{progress.Message} {percent}%"
+                        : progress.Message;
+                    if (progress.Resumed == true)
+                    {
+                        RuntimeRecoveryMessage.Text =
+                            "前回の続きからダウンロードしています。";
+                        RuntimeRecoveryMessage.Visibility =
+                            Visibility.Visible;
+                    }
+                }));
+            PrepareButton.IsEnabled = true;
+            if (preparation.Status != "success"
+                || preparation.Sha256Verified != true
+                || preparation.FallbackAllowed != false)
+            {
+                RuntimeMessage.Text = preparation.SafeReason
+                    ?? "モデルの準備を完了できませんでした。";
+                RuntimeErrorCode.Text =
+                    $"error_code={preparation.ErrorCode ?? "model_prepare_failed"}";
+                RuntimeErrorCode.Visibility = Visibility.Visible;
+                RuntimeRecoveryMessage.Text =
+                    "通信を確認して、もう一度押してください。中断済みデータが有効なら続きから再開します。";
+                RuntimeRecoveryMessage.Visibility = Visibility.Visible;
+                StatusPillText.Text = "準備できません";
+                return;
+            }
+        }
         var result = _configuration.CheckRuntime();
         RuntimeMessage.Text = result.Message;
         if (!result.Passed)

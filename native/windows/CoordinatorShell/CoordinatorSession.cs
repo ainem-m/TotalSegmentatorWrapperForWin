@@ -329,6 +329,27 @@ internal sealed class CoordinatorSession : IDisposable
         string coordinatorStderrPath,
         string supervisorEvidencePath)
     {
+        var totalSegmentatorStateDirectory = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "TotalSegmentatorWrapperWindows",
+            "totalseg-state");
+        Directory.CreateDirectory(totalSegmentatorStateDirectory);
+        var runtimeTemporaryDirectory = Path.Combine(
+            _configuration.OutputRoot,
+            ".runtime-tmp");
+        Directory.CreateDirectory(runtimeTemporaryDirectory);
+        var userConfigPath = Path.Combine(
+            totalSegmentatorStateDirectory,
+            "config.json");
+        if (!File.Exists(userConfigPath))
+        {
+            File.Copy(
+                Path.Combine(
+                    _configuration.TotalSegmentatorHome,
+                    "config.json"),
+                userConfigPath);
+        }
         var startInfo = new ProcessStartInfo
         {
             FileName = _configuration.SupervisorPath,
@@ -342,7 +363,7 @@ internal sealed class CoordinatorSession : IDisposable
             StandardErrorEncoding = new UTF8Encoding(false),
             CreateNoWindow = true,
         };
-        foreach (var argument in new[]
+        var supervisorArguments = new List<string>
         {
             "supervise",
             "--request",
@@ -360,7 +381,10 @@ internal sealed class CoordinatorSession : IDisposable
             "12000",
             "--",
             _configuration.CoordinatorPath,
-        })
+        };
+        supervisorArguments.AddRange(
+            _configuration.CoordinatorArguments);
+        foreach (var argument in supervisorArguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
@@ -381,12 +405,21 @@ internal sealed class CoordinatorSession : IDisposable
                 existingPath,
             }.Where(value => !string.IsNullOrWhiteSpace(value)));
         startInfo.Environment["TOTALSEG_HOME_DIR"] =
-            _configuration.TotalSegmentatorHome;
+            totalSegmentatorStateDirectory;
+        startInfo.Environment["TOTALSEG_WEIGHTS_PATH"] = Path.Combine(
+            _configuration.TotalSegmentatorHome,
+            "nnunet",
+            "results");
+        startInfo.Environment["TEMP"] = runtimeTemporaryDirectory;
+        startInfo.Environment["TMP"] = runtimeTemporaryDirectory;
         startInfo.Environment["TSWM_DENTALSEG_MODEL_ROOT"] =
             _configuration.DentalSegmentatorModelRoot;
         startInfo.Environment["TSWM_TOOTHSEG_MODEL_ROOT"] =
             _configuration.ToothSegModelRoot;
+        startInfo.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         startInfo.Environment["PYTHONNOUSERSITE"] = "1";
+        startInfo.Environment["PYTHONPATH"] =
+            _configuration.UserPythonPackagesRoot;
         startInfo.Environment["PYTHONUTF8"] = "1";
         return Process.Start(startInfo)
             ?? throw new InvalidOperationException(

@@ -1,0 +1,14 @@
+{
+  "schema": "totalsegmentator_wrapper.windows_pytorch_runtime_bundle.v1",
+  "bundle_id": "pytorch-cuda",
+  "version": "2.11.0+cu126-cp312-win-x64",
+  "package": "torch",
+  "python_version": "3.12",
+  "torch_version": "2.11.0+cu126",
+  "cuda_version": "12.6",
+  "wheel_filename": "torch-2.11.0+cu126-cp312-cp312-win_amd64.whl",
+  "url": "https://download.pytorch.org/whl/cu126/torch-2.11.0%2Bcu126-cp312-cp312-win_amd64.whl",
+  "sha256": "1b7d728ddcf84b12f64ca10ec5f6ce91dd9edcc5e62ed5f0a7260ca00f029e8b",
+  "size_bytes": 2596453924,
+  "fallback_allowed": false
+}

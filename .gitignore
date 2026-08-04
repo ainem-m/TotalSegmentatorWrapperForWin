@@ -7,6 +7,14 @@ runs/
 build/
 dist/
 *.egg-info/
+*.pfx
+*.msix
+*.msixbundle
+TotalSegmentatorWrapperForWin-Alpha-Portable_*.zip
+TSW-Alpha-*-win-x64.zip
+artifacts/alpha-installer/
+artifacts/alpha-portable/
+packaging/windows-alpha/out/
 resources/demo_surface_preview/
 __pycache__/
 *.py[cod]
